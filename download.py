@@ -6,7 +6,8 @@ import hashlib
 import requests
 import argparse
 from tqdm import tqdm
-from constants import DOWNLOAD_INFO, DATA_PATH, str2bool
+from utils import str2bool
+from config import DATASET_INFO, DATA_PATH
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -15,7 +16,6 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--dataset', type=str, default='voc2012', help='Dataset to download')
-    parser.add_argument('--store-dir', type=str, default=DATA_PATH, help='Path to a directory that store dataset')
     parser.add_argument('--keep', type=str2bool, default=True, help='Keep compressed file after extracting')
     args = parser.parse_args()
     return args
@@ -146,5 +146,7 @@ def extractor(file, path='./', keep=False):
 
 if __name__ == '__main__':
     args = parse_args()
-    file = download_url(DOWNLOAD_INFO[args.dataset]['url'], args.store_dir, DOWNLOAD_INFO[args.dataset]['hash'])
-    extractor('./data/VOCtrainval_11-May-2012.tar', args.store_dir, args.keep)
+    url = DATASET_INFO[args.dataset]['url']
+    hash_code = DATASET_INFO[args.dataset]['hash']
+    file = download_url(url, DATA_PATH, hash_code)
+    extractor(file, DATA_PATH, args.keep)

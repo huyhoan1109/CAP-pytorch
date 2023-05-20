@@ -3,6 +3,7 @@ import torch
 import wandb
 import shutil
 import numpy as np
+from config import LAST_MODEL, BEST_MODEL
 
 class WandbLogger():
     def __init__(self, args) -> None:
@@ -56,10 +57,10 @@ def save_checkpoints(
     ):
 
     state = {
-        'epoch': current_epoch,
-        'total_epoch': total_epoch,
         'iter': current_iter,
         'total_iter': total_iter,
+        'epoch': current_epoch,
+        'total_epoch': total_epoch,
         'model_state_dict': model.state_dict(),
         'ema_state_dict': ema.state_dict(),
         'optimizer': optimizer.state_dict(),
@@ -74,11 +75,11 @@ def save_checkpoints(
     elif os.path.exists(checkpoint_path) and not is_best:
         print(f"Checkpoint {file_path} does exist!. Override the checkpoint ...")
     
-    file_path = os.path.join(checkpoint_path, 'last.pth')
+    file_path = os.path.join(checkpoint_path, LAST_MODEL)
     torch.save(state, file_path)
     
     if is_best:
-        best_path = os.path.join(checkpoint_path, 'best.pth')
+        best_path = os.path.join(checkpoint_path, BEST_MODEL)
         if os.path.isfile(best_path):
             print(f"Checkpoint {best_path} does exist!. Override the checkpoint ...")
         shutil.copyfile(file_path, best_path)
@@ -103,14 +104,12 @@ def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None):
     if scheduler and 'scheduler' in cp:
         scheduler.load_state_dict(cp['scheduler'])
 
-    state_time = {
-        'epoch': cp['epoch'] + 1,
-        'total_epoch': cp['total_epoch'],
-        'iter': cp['iter'],
-        'total_iter': cp['total_iter']
-    }
+    last_iter = cp['iter'] 
+    total_iter = cp['total_iter']
+    last_epoch = cp['epoch']
+    total_epoch = cp['total_epoch']
 
-    return state_time
+    return last_iter, total_iter, last_epoch, total_epoch
 
 class AverageMeter():
     """Computes and stores the average and current value"""

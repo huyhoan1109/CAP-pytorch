@@ -1,31 +1,57 @@
 import os
-import argparse
 import numpy as np
 from sklearn.model_selection import train_test_split
-from constants import DATA_PATH, METADATA_PATH, LABEL2ID
 
-def save_voc(path, image_dict, X, mode='labeled'):
+def save_voc(X, label2id, image_dict, path, mode='labeled'):
     if mode not in ('labeled', 'unlabeled', 'valid', 'test'):
         raise 'Save mode not available!'
-    num_images = len(X)
+    
     X.sort()
-    label_matrix = np.zeros((num_images, len(LABEL2ID['voc'])))
+    num_images = len(X)
+    label_matrix = np.zeros((num_images, len(label2id)))
+    
     for i in range(num_images):
         cur_image = X[i]
         label_indices = np.array(image_dict[cur_image])
         label_matrix[i, label_indices] = 1.0
-
-    if mode == 'unlabeled':
-        np.save(os.path.join(path, 'formatted_unlabeled_images.npy'), X)
-    else:
-        np.save(os.path.join(path, f'formatted_{mode}_images.npy'), X)
-        np.save(os.path.join(path, f'formatted_{mode}_labels.npy'), label_matrix)
+    
+    img_path = os.path.join(path, f'formatted_{mode}_images.npy')
+    np.save(img_path, X)
+    print(f'Generated {img_path} ...')
+    
+    if mode != 'unlabeled':
+        label_path = os.path.join(path, f'formatted_{mode}_labels.npy')
+        np.save(label_path, label_matrix)
+        print(f'Generated {label_path} ...')
 
 def checksize(size, mode='labeled'):
     if size < 0 or size > 1:
         raise f'Size of {mode} dataset must be between 0 and 1!'
 
-def generate_voc_npy(args):
+def generate_npy(data_path, meta_path, label2id, labeled_size, valid_size, test_size, random_state):
+    
+    """
+    Args:
+    
+        data_path : str
+            Path to a directory store data
+        meta_path : str
+            Path to a directory store metadata
+        label2id : dict
+            Dictionary that store label and id information
+        labeled_size : float
+            Size of labeled dataset (in the interval [0, 1))
+        valid_size : float
+            Size of valid dataset (in the interval [0, 1))
+        test_size : float
+            Size of test dataset (in the interval [0, 1))
+        random_state : int | None
+            Random state Instance
+        
+    """
+
+    print('Generating metadata from dataset ...')
+    os.makedirs(meta_path, exist_ok=True)
     image_dict = {}
     data = {
         'labeled': [],
@@ -33,14 +59,14 @@ def generate_voc_npy(args):
         'val': [], 
         'test': []
     }
-    checksize(args.labeled)
-    checksize(args.valid, 'valid')
-    checksize(args.test, 'test')
-    for cat in LABEL2ID['voc']:
+    checksize(labeled_size)
+    checksize(valid_size, 'valid')
+    checksize(test_size, 'test')
+    for cat in label2id:
         image_list = []
         labels = []
         num_images = 0
-        with open(os.path.join(args.load_dir, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Main', f"{cat}_trainval.txt"), 'r') as f:
+        with open(os.path.join(data_path, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Main', f"{cat}_trainval.txt"), 'r') as f:
             for line in f:
                 num_images += 1
                 cur_line = line.rstrip().split(' ')
@@ -51,37 +77,19 @@ def generate_voc_npy(args):
                 if label == 1:
                     if f_img not in image_dict:
                         image_dict[f_img] = []
-                    image_dict[f_img].append(LABEL2ID['voc'][cat])
-        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=args.valid, random_state=args.random_state)
-        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=args.test, random_state=args.random_state)
-        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=args.labeled, random_state=args.random_state)
+                    image_dict[f_img].append(label2id[cat])
+        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=valid_size, random_state=random_state)
+        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=test_size, random_state=random_state)
+        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=labeled_size, random_state=random_state)
         data['unlabeled'].extend(X_unlabeled)
         data['labeled'].extend(X_labeled)
         data['val'].extend(X_valid)
         data['test'].extend(X_test)
 
     X_ulb, X_lb_tr, X_v, X_t = data['unlabeled'], data['labeled'], data['val'], data['test']
-    save_voc(args.save_dir, image_dict, X_lb_tr)
-    save_voc(args.save_dir, image_dict, X_ulb, mode='unlabeled')
-    save_voc(args.save_dir, image_dict, X_v, mode='valid')
-    save_voc(args.save_dir, image_dict, X_t, mode='test')
-        
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Initialize PASCAL VOC dataset.',
-        epilog='Example: python format_voc.py --save-dir ../data',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument('--random-state', type=float, default=42, help='random state to split dataset')
-    parser.add_argument('--load-dir', type=str, default=DATA_PATH, help='path to a directory containing dataset')
-    parser.add_argument('--save-dir', type=str, default=METADATA_PATH+'/voc2012', help='path to a directory to save metadata')
-    parser.add_argument('--labeled', type=float, default=0.2, help='size of labeled dataset')
-    parser.add_argument('--valid', type=float, default=0.1, help='size of valid dataset')
-    parser.add_argument('--test', type=float, default=0.1, help='size of test dataset')
-    args = parser.parse_args()
-    return args
+    save_voc(X_lb_tr, label2id, image_dict, meta_path)
+    save_voc(X_ulb, label2id, image_dict, meta_path, mode='unlabeled')
+    save_voc(X_v, label2id, image_dict, meta_path, mode='valid')
+    save_voc(X_t, label2id, image_dict, meta_path, mode='test')
 
-if __name__ == '__main__':
-    args = parse_args()
-    os.makedirs(args.save_dir, exist_ok=True)
-    generate_voc_npy(args)
+    print('Complete generating metadata!')

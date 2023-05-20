@@ -145,6 +145,10 @@ def str2bool(v):
     else:
         raise 'Boolean value expected.'
 
+def load_npy_pkl(file):
+    load = np.load(file, allow_pickle=True)
+    return load
+
 def load_meta(path, mode):
     if mode not in ('unlabeled', 'labeled', 'valid', 'test'):
         raise 'Load metadata mode not available!'

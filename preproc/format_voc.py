@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pickle as pk
 from sklearn.model_selection import train_test_split
 
 def save_voc(X, label2id, image_dict, path, mode='labeled'):
@@ -17,36 +18,41 @@ def save_voc(X, label2id, image_dict, path, mode='labeled'):
     
     img_path = os.path.join(path, f'formatted_{mode}_images.npy')
     np.save(img_path, X)
-    print(f'Generated {img_path} ...')
+    print(f'Generated {img_path}')
     
     if mode != 'unlabeled':
         label_path = os.path.join(path, f'formatted_{mode}_labels.npy')
         np.save(label_path, label_matrix)
-        print(f'Generated {label_path} ...')
+        print(f'Generated {label_path}')
 
 def checksize(size, mode='labeled'):
     if size < 0 or size > 1:
         raise f'Size of {mode} dataset must be between 0 and 1!'
 
-def generate_npy(data_path, meta_path, label2id, labeled_size, valid_size, test_size, random_state):
+def generate_npy(data_path, meta_path, label2id, id2label, args):
     
     """
-    Args:
+    Parameters:
     
         data_path : str
             Path to a directory store data
         meta_path : str
             Path to a directory store metadata
         label2id : dict
-            Dictionary that store label and id information
-        labeled_size : float
-            Size of labeled dataset (in the interval [0, 1))
-        valid_size : float
-            Size of valid dataset (in the interval [0, 1))
-        test_size : float
-            Size of test dataset (in the interval [0, 1))
-        random_state : int | None
-            Random state Instance
+            Dictionary that help mapping label to id
+        id2label : dict
+            Dictionary that help mapping id to label
+        args: 
+            Contain belows parameters
+            
+            labeled_size : float
+                Size of labeled dataset (in the interval [0, 1))
+            valid_size : float
+                Size of valid dataset (in the interval [0, 1))
+            test_size : float
+                Size of test dataset (in the interval [0, 1))
+            random_state : int | None
+                Random state Instance
         
     """
 
@@ -59,14 +65,14 @@ def generate_npy(data_path, meta_path, label2id, labeled_size, valid_size, test_
         'val': [], 
         'test': []
     }
-    checksize(labeled_size)
-    checksize(valid_size, 'valid')
-    checksize(test_size, 'test')
+    checksize(args.labeled)
+    checksize(args.valid, 'valid')
+    checksize(args.test, 'test')
     for cat in label2id:
         image_list = []
         labels = []
         num_images = 0
-        with open(os.path.join(data_path, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Main', f"{cat}_trainval.txt"), 'r') as f:
+        with open(os.path.join(data_path, f"{cat}_trainval.txt"), 'r') as f:
             for line in f:
                 num_images += 1
                 cur_line = line.rstrip().split(' ')
@@ -78,9 +84,9 @@ def generate_npy(data_path, meta_path, label2id, labeled_size, valid_size, test_
                     if f_img not in image_dict:
                         image_dict[f_img] = []
                     image_dict[f_img].append(label2id[cat])
-        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=valid_size, random_state=random_state)
-        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=test_size, random_state=random_state)
-        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=labeled_size, random_state=random_state)
+        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=args.valid, random_state=args.random_state)
+        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=args.test, random_state=args.random_state)
+        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=args.labeled, random_state=args.random_state)
         data['unlabeled'].extend(X_unlabeled)
         data['labeled'].extend(X_labeled)
         data['val'].extend(X_valid)
@@ -91,5 +97,5 @@ def generate_npy(data_path, meta_path, label2id, labeled_size, valid_size, test_
     save_voc(X_ulb, label2id, image_dict, meta_path, mode='unlabeled')
     save_voc(X_v, label2id, image_dict, meta_path, mode='valid')
     save_voc(X_t, label2id, image_dict, meta_path, mode='test')
-
-    print('Complete generating metadata!')
+    np.save(meta_path + '/label2id.npy', label2id)
+    np.save(meta_path + '/id2label.npy', id2label)

@@ -3,13 +3,13 @@ import numpy as np
 import pickle as pk
 from sklearn.model_selection import train_test_split
 
-def save_voc(X, label2id, image_dict, path, mode='labeled'):
+def save_voc(X, cat2id, image_dict, path, mode='labeled'):
     if mode not in ('labeled', 'unlabeled', 'valid', 'test'):
         raise 'Save mode not available!'
     
     X.sort()
     num_images = len(X)
-    label_matrix = np.zeros((num_images, len(label2id)))
+    label_matrix = np.zeros((num_images, len(cat2id)))
     
     for i in range(num_images):
         cur_image = X[i]
@@ -29,8 +29,7 @@ def checksize(size, mode='labeled'):
     if size < 0 or size > 1:
         raise f'Size of {mode} dataset must be between 0 and 1!'
 
-def generate_npy(data_path, meta_path, label2id, id2label, args):
-    
+def generate_npy(data_path, meta_path, cat2id, id2cat, args):
     """
     Parameters:
     
@@ -38,9 +37,9 @@ def generate_npy(data_path, meta_path, label2id, id2label, args):
             Path to a directory store data
         meta_path : str
             Path to a directory store metadata
-        label2id : dict
+        cat2id : dict
             Dictionary that help mapping label to id
-        id2label : dict
+        id2cat : dict
             Dictionary that help mapping id to label
         args: 
             Contain belows parameters
@@ -68,7 +67,7 @@ def generate_npy(data_path, meta_path, label2id, id2label, args):
     checksize(args.labeled)
     checksize(args.valid, 'valid')
     checksize(args.test, 'test')
-    for cat in label2id:
+    for cat in cat2id:
         image_list = []
         labels = []
         num_images = 0
@@ -83,7 +82,7 @@ def generate_npy(data_path, meta_path, label2id, id2label, args):
                 if label == 1:
                     if f_img not in image_dict:
                         image_dict[f_img] = []
-                    image_dict[f_img].append(label2id[cat])
+                    image_dict[f_img].append(cat2id[cat])
         X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=args.valid, random_state=args.random_state)
         X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=args.test, random_state=args.random_state)
         X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=args.labeled, random_state=args.random_state)
@@ -93,9 +92,9 @@ def generate_npy(data_path, meta_path, label2id, id2label, args):
         data['test'].extend(X_test)
 
     X_ulb, X_lb_tr, X_v, X_t = data['unlabeled'], data['labeled'], data['val'], data['test']
-    save_voc(X_lb_tr, label2id, image_dict, meta_path)
-    save_voc(X_ulb, label2id, image_dict, meta_path, mode='unlabeled')
-    save_voc(X_v, label2id, image_dict, meta_path, mode='valid')
-    save_voc(X_t, label2id, image_dict, meta_path, mode='test')
-    np.save(meta_path + '/label2id.npy', label2id)
-    np.save(meta_path + '/id2label.npy', id2label)
+    save_voc(X_lb_tr, cat2id, image_dict, meta_path)
+    save_voc(X_ulb, cat2id, image_dict, meta_path, mode='unlabeled')
+    save_voc(X_v, cat2id, image_dict, meta_path, mode='valid')
+    save_voc(X_t, cat2id, image_dict, meta_path, mode='test')
+    np.save(meta_path + '/cat2id.npy', cat2id)
+    np.save(meta_path + '/id2cat.npy', id2cat)

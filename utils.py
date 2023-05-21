@@ -3,7 +3,7 @@ import torch
 import wandb
 import shutil
 import numpy as np
-from config import LAST_MODEL, BEST_MODEL
+from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 
 class WandbLogger():
     def __init__(self, args) -> None:
@@ -155,10 +155,20 @@ def load_meta(path, mode):
     if mode == 'unlabeled':
         meta = {
             'images': np.load(os.path.join(path,f'formatted_{mode}_images.npy')),
+            'id2cat': load_npy_pkl(os.path.join(path,f'/id2cat.npy')),
+            'cat2id': load_npy_pkl(os.path.join(path,f'/cat2id.npy'))
         }
     else:
         meta = {
             'images': np.load(os.path.join(path,f'formatted_{mode}_images.npy')),
-            'labels': np.load(os.path.join(path,f'formatted_{mode}_labels.npy'))
+            'labels': np.load(os.path.join(path,f'formatted_{mode}_labels.npy')),
+            'id2cat': load_npy_pkl(os.path.join(path,f'/id2cat.npy')),
+            'cat2id': load_npy_pkl(os.path.join(path,f'/id2cat.npy'))
         }
-    return meta    
+    return meta  
+
+def neg_log(x):
+    return - torch.log(x + NEG_EPSILON)
+
+def exp_neg(x):
+    return torch.exp(-x)  

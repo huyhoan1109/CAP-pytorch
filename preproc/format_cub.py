@@ -1,7 +1,7 @@
 import os
 
 #TODO
-def generate_npy(data_path, meta_path, args):
+def generate_npy(data_path, meta_path, cat2id, id2cat, args):
     # create one hot label matrix for dataset
     # args.labeled, args.valid, args.test, args.random_state 
 
@@ -12,9 +12,9 @@ def generate_npy(data_path, meta_path, args):
             Path to a directory store data
         meta_path : str
             Path to a directory store metadata
-        label2id : dict
+        cat2id : dict
             Dictionary that help mapping label to id
-        id2label : dict
+        id2cat : dict
             Dictionary that help mapping id to label
         args: 
             Contain belows parameters
@@ -32,5 +32,6 @@ def generate_npy(data_path, meta_path, args):
 
     print('Generating metadata from dataset ...')
     os.makedirs(meta_path, exist_ok=True)
-
+    print(data_path)
+    dataset_file = os.path.join(data_path, 'train_test_split.txt')
     pass

@@ -30,7 +30,7 @@ DATASET_INFO = {
     }
 }
 
-LABEL2ID = {
+CAT2ID = {
     'voc2012': {
         'aeroplane': 0,
         'bicycle': 1,
@@ -55,8 +55,8 @@ LABEL2ID = {
     }
 }
 
-ID2LABEL = {
+ID2CAT = {
     key: {
-        LABEL2ID[key][i]: i for i in LABEL2ID[key]
-    } for key in LABEL2ID.keys()
+        CAT2ID[key][i]: i for i in CAT2ID[key]
+    } for key in CAT2ID.keys()
 }

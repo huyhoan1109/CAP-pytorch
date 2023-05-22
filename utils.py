@@ -84,9 +84,10 @@ def save_checkpoints(
             print(f"Checkpoint {best_path} does exist!. Override the checkpoint ...")
         shutil.copyfile(file_path, best_path)
 
-def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None):
+def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None, load_best=False):
     if not os.path.exists(checkpoint):
-        raise(f"Checkpoint {checkpoint} isn't existed")
+        print(f"Checkpoint {checkpoint} isn't existed")
+        return None, None, None, None
     
     print(f"Load checkpoint from {checkpoint} ...")
     cp = torch.load(checkpoint)
@@ -104,10 +105,10 @@ def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None):
     if scheduler and 'scheduler' in cp:
         scheduler.load_state_dict(cp['scheduler'])
 
-    last_iter = cp['iter'] 
-    total_iter = cp['total_iter']
-    last_epoch = cp['epoch']
-    total_epoch = cp['total_epoch']
+    last_iter = cp['iter'] if 'iter' in cp else None
+    total_iter = cp['total_iter'] if 'total_iter' in cp else None
+    last_epoch = cp['epoch'] if 'epoch' in cp else None
+    total_epoch = cp['total_epoch'] if 'total_epoch' in cp else None
 
     return last_iter, total_iter, last_epoch, total_epoch
 
@@ -155,20 +156,17 @@ def load_meta(path, mode):
     if mode == 'unlabeled':
         meta = {
             'images': np.load(os.path.join(path,f'formatted_{mode}_images.npy')),
-            'id2cat': load_npy_pkl(os.path.join(path,f'/id2cat.npy')),
-            'cat2id': load_npy_pkl(os.path.join(path,f'/cat2id.npy'))
+            'id2cat': load_npy_pkl(os.path.join(path,f'id2cat.npy')),
+            'cat2id': load_npy_pkl(os.path.join(path,f'cat2id.npy'))
         }
     else:
         meta = {
             'images': np.load(os.path.join(path,f'formatted_{mode}_images.npy')),
             'labels': np.load(os.path.join(path,f'formatted_{mode}_labels.npy')),
-            'id2cat': load_npy_pkl(os.path.join(path,f'/id2cat.npy')),
-            'cat2id': load_npy_pkl(os.path.join(path,f'/id2cat.npy'))
+            'id2cat': load_npy_pkl(os.path.join(path,f'id2cat.npy')),
+            'cat2id': load_npy_pkl(os.path.join(path,f'id2cat.npy'))
         }
     return meta  
 
 def neg_log(x):
     return - torch.log(x + NEG_EPSILON)
-
-def exp_neg(x):
-    return torch.exp(-x)  

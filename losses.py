@@ -1,9 +1,5 @@
 import torch
-
-NEG_EPSILON = 1e-5
-
-def neg_log(x):
-    return - torch.log(x + NEG_EPSILON)
+from utils import neg_log
 
 def get_bce_loss(labels, preds, masks=None):
     

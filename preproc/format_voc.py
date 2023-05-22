@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pickle as pk
 from sklearn.model_selection import train_test_split
 
 def save_voc(X, cat2id, image_dict, path, mode='labeled'):
@@ -29,18 +28,16 @@ def checksize(size, mode='labeled'):
     if size < 0 or size > 1:
         raise f'Size of {mode} dataset must be between 0 and 1!'
 
-def generate_npy(data_path, meta_path, cat2id, id2cat, args):
+def generate_npy(split_path, meta_path, cat2id, args):
     """
     Parameters:
     
-        data_path : str
+        split_path : str
             Path to a directory store data
         meta_path : str
             Path to a directory store metadata
         cat2id : dict
             Dictionary that help mapping label to id
-        id2cat : dict
-            Dictionary that help mapping id to label
         args: 
             Contain belows parameters
             
@@ -55,7 +52,6 @@ def generate_npy(data_path, meta_path, cat2id, id2cat, args):
         
     """
 
-    print('Generating metadata from dataset ...')
     os.makedirs(meta_path, exist_ok=True)
     image_dict = {}
     data = {
@@ -67,11 +63,14 @@ def generate_npy(data_path, meta_path, cat2id, id2cat, args):
     checksize(args.labeled)
     checksize(args.valid, 'valid')
     checksize(args.test, 'test')
+
+    #NEED TO CHANGE
+
     for cat in cat2id:
         image_list = []
         labels = []
         num_images = 0
-        with open(os.path.join(data_path, f"{cat}_trainval.txt"), 'r') as f:
+        with open(os.path.join(split_path, f"{cat}_trainval.txt"), 'r') as f:
             for line in f:
                 num_images += 1
                 cur_line = line.rstrip().split(' ')
@@ -83,18 +82,28 @@ def generate_npy(data_path, meta_path, cat2id, id2cat, args):
                     if f_img not in image_dict:
                         image_dict[f_img] = []
                     image_dict[f_img].append(cat2id[cat])
-        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=args.valid, random_state=args.random_state)
-        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=args.test, random_state=args.random_state)
-        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=args.labeled, random_state=args.random_state)
+        valid_t = args.valid
+        X_t, X_valid, y_t, _ = train_test_split(image_list, labels, test_size=valid_t, random_state=args.random_state)
+        test_t = args.test / (1 - args.valid) 
+        X_train, X_test, y_train, _ = train_test_split(X_t, y_t,test_size=test_t, random_state=args.random_state)
+        label_t = args.labeled / (1 - test_t)
+        X_unlabeled, X_labeled, _ , _ = train_test_split(X_train, y_train, test_size=label_t, random_state=args.random_state)
         data['unlabeled'].extend(X_unlabeled)
         data['labeled'].extend(X_labeled)
         data['val'].extend(X_valid)
         data['test'].extend(X_test)
 
     X_ulb, X_lb_tr, X_v, X_t = data['unlabeled'], data['labeled'], data['val'], data['test']
+    
     save_voc(X_lb_tr, cat2id, image_dict, meta_path)
     save_voc(X_ulb, cat2id, image_dict, meta_path, mode='unlabeled')
     save_voc(X_v, cat2id, image_dict, meta_path, mode='valid')
     save_voc(X_t, cat2id, image_dict, meta_path, mode='test')
-    np.save(meta_path + '/cat2id.npy', cat2id)
-    np.save(meta_path + '/id2cat.npy', id2cat)
+    
+    cat2id_f = meta_path + '/cat2id.npy'
+    id2cat_f = meta_path + '/id2cat.npy'
+    np.save(cat2id_f, cat2id)
+    print(f'Generated {cat2id_f}')
+    id2cat = {cat2id[k] for k in cat2id.keys()}
+    np.save(id2cat_f, id2cat)
+    print(f'Generated {id2cat_f}')

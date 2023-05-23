@@ -40,13 +40,6 @@ def generate_meta(args):
                 label = curr_line[-1]
                 cat2id[label] = Id
         format_cub.generate_npy(data_path, meta, cat2id, args)
-    elif dataset == 'mlrs':
-        split_path = DATASET_INFO[dataset]['root']
-        cat_p = os.path.join(split_path, 'Categories_names.xlsx')
-        xls = pd.read_excel(cat_p)
-        col = xls.columns[0]
-        cat2id = {xls[col][k]: k for k in xls[col].keys()}
-        format_mlrs.generate_npy(split_path, meta, cat2id, args)  
     else:
         raise NotImplementedError('Dataset not available!')
 

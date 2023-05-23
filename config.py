@@ -8,7 +8,7 @@ LAMBDA_U = 1
 T = 1
 TOTAL_EPOCH = 400
 TOTAL_ITERS = 1000
-LEARNING_RATE = 5e-4
+LEARNING_RATE = 0.0001
 
 OPTIMIZER = {
     1: {
@@ -46,10 +46,9 @@ SCHEDULER = {
        'eta_min': 0.0001,
        'T_max': 400
     },
-    3: 
-    {
+    3: {
        'name': 'OneCycleLR', 
-       'max_lr': 5e-4
+       'max_lr': LEARNING_RATE
     },
 }
 
@@ -62,9 +61,6 @@ DATASET_INFO = {
         'split': f'{DATA_PATH}/VOCdevkit/VOC2012/ImageSets/Main',
         'url': 'http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar',
         'extension': '.tar'
-        #'hash': {
-
-        # }
     },
 
     'cub': {
@@ -75,17 +71,7 @@ DATASET_INFO = {
         'split': f'{DATA_PATH}/cub/CUB_200_2011/train_test_split.txt',
         'url': 'https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz',
         'extension': '.tgz'
-        #'hash': {
-
-        # }
     },
-
-    # 'mlrs':{
-    #     'root': f'{DATA_PATH}/mlrs',
-    #     'meta': f'{DATA_PATH}/metadata/mlrs',
-    #     'url': "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/7j9bv9vwsx-1.zip",
-    #     'extension': '.zip'
-    # }
 }
 
 CAT2ID = {

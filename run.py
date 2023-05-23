@@ -1,17 +1,18 @@
 import os
-import torch
 import argparse
-from MA.EMA import EMA
-from datasets import SemiData
+
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-from CAP.models.CapNet import CapNet
+
+from MA.EMA import EMA
+from datasets import SemiData
+from models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
 from augmentation.transforms import get_pre_transform, get_multi_transform
-from utils import save_checkpoints, load_checkpoints, str2bool, neg_log
-from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER
+from utils import save_checkpoints, load_checkpoints, str2bool
+from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -23,13 +24,14 @@ def parse_args():
     parser.add_argument('--train', type=str2bool, default=True, help='Training semi model')
     parser.add_argument('--eval', type=str2bool, default=False, help='Evaluating semi model')
     parser.add_argument('--use-ema', type=str2bool, default=True, help='Using exponential moving average model')
-    parser.add_argument('--ema-decay', type=int, default=0.999, help='Moving average decay')
+    parser.add_argument('--ema-decay', type=int, default=0.9997, help='Moving average decay')
     parser.add_argument('--resume', type=str2bool, default=True, help='Resume training from checkpoint')
     parser.add_argument('--e-stop', type=int, default=5, help='Use early stoping for model training')
     parser.add_argument('--cp-path', type=str, default=CHECKPOINT_PATH, help='Path to a directory that store checkpoints')
     parser.add_argument('--eval-it', type=int, default=1000, help='Path to a directory that store checkpoints')
     parser.add_argument('--sch', type=int, default=1, choices=SCHEDULER.keys(), help='Choose scheduler type')
     parser.add_argument('--opt', type=int, default=1, choices=OPTIMIZER.keys(), help='Choose optimizer type')    
+    parser.add_argument('--use-asl', type=str2bool, default=True, help='Whether to use ASL loss')
     args = parser.parse_args()
     return args
 
@@ -38,7 +40,6 @@ def get_loaders(args):
     labeled_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
-        pre_transform = get_pre_transform()
     )
     
     labeled_loader = DataLoader(
@@ -51,8 +52,6 @@ def get_loaders(args):
     unlabeled_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
-        pre_transform = get_pre_transform(),
-        multi_transform = get_multi_transform(),
         mode='unlabeled'
     )
     
@@ -66,7 +65,6 @@ def get_loaders(args):
     valid_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
-        pre_transform = get_pre_transform(), 
         mode='valid'
     )
     
@@ -80,7 +78,6 @@ def get_loaders(args):
     test_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO['voc2012']['meta'], 
-        pre_transform = get_pre_transform(), 
         mode='test'
     )
     
@@ -154,7 +151,7 @@ def train_model(args, loaders, model, ema=None, optimizer=None, scheduler=None):
     assert labeled_loader != None
     assert unlabeled_loader != None
     
-    last_path = os.path.join(args.cp_path, 'last.pth')
+    last_path = os.path.join(args.cp_path, LAST_MODEL)
     last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(last_path, model, ema, optimizer, scheduler)        
     
     if last_iter is None:
@@ -169,30 +166,28 @@ def train_model(args, loaders, model, ema=None, optimizer=None, scheduler=None):
     warpup_epoch = WARMUP_EPOCH
     for epoch in range(last_epoch, total_epoch):
         curr_iter = 0
-        for batch in zip(labeled_loader, unlabeled_loader):
+        for lb_batch, ulb_batch in zip(labeled_loader, unlabeled_loader):
             curr_iter += 1     
-            model.train()
-            if ema is not None:
-                model.train()            
-            if epoch >= warpup_epoch:
-                model.semi_mode = True
-            loss = compute_batch_loss(model, batch, lambda_u=LAMBDA_U)        
-            if ema is not None:
-                ema.update()      
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-            if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
-                # TODO
-                # Early stoping and evaluating process
-                is_best = False
-                save_checkpoints(curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best, args.cp_path)
+            # model.train()
+            # if ema is not None:
+            #     model.train()            
+            # if epoch >= warpup_epoch:
+            #     model.semi_mode = True
+            # loss = compute_batch_loss(args, model, lb_batch, ulb_batch, lambda_u=LAMBDA_U)        
+            # if ema is not None:
+            #     ema.update()      
+            # loss.backward()
+            # optimizer.step()
+            # scheduler.step()
+            # if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
+            #     # TODO
+            #     # Early stoping and evaluating process
+            #     is_best = False
+            #     save_checkpoints(curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best, args.cp_path)
 
 def eval_model(args, model, ema=None):
     model.eval()
-    # TODO
-    model.train()
-    
+    # TODO    
 
 
 if __name__ == '__main__':

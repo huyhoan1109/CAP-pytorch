@@ -23,43 +23,6 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def checkfileext(file):
-    ext = file.split('.')[-1]
-    return ext in ('tar', 'tgz', 'zip', 'gz')
-
-def check_hash(filename, hash_type, hash_code):
-    """Check whether the sha1 hash of the file content matches the expected hash.
-
-    ----------
-    Args:
-
-    filename : str
-        Path to the file.
-    sha1_hash : str
-        Expected sha1 hash in hexadecimal digits.
-
-    -------
-    Return
-    bool
-        Whether the file content matches the expected hash.
-    """
-    read_size = 1048576
-    if hash_type == 'md5':
-        hash_algo = hashlib.md5()
-    elif hash_type == 'sha1':
-        hash_algo = hashlib.sha1()
-    
-    with open(filename, 'rb') as f:
-        while True:
-            data = f.read(read_size)
-            if not data:
-                break
-            hash_algo.update(data)
-
-    hash_file = hash_algo.hexdigest()
-    l = min(len(hash_file), len(hash_code))
-    return hash_file[0:l] == hash_code[0:l]
-
 def is_valid_url(url):
     regex = re.compile(
         r'^(?:http|ftp)s?://' # http:// or https://
@@ -99,7 +62,7 @@ def download_url(args, url, path='./', hash_type=None, hash_code=None):
         if os.path.isdir(path):
             fname = os.path.join(path, fname)
 
-    if args.overwrite or not os.path.exists(fname) or hash_type or (hash_code and not check_hash(fname, hash_type, hash_code)):
+    if args.overwrite or not os.path.exists(fname):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -118,12 +81,6 @@ def download_url(args, url, path='./', hash_type=None, hash_code=None):
                 total_length = int(total_length)
                 for chunk in tqdm(r.iter_content(chunk_size=CHUNK_SIZE), total=int(total_length / CHUNK_SIZE + 0.5), unit='KB', unit_scale=False, dynamic_ncols=True):
                     f.write(chunk)
-
-        if hash_type or (hash_code and not check_hash(fname, hash_type, hash_code)):
-            raise UserWarning('File {} is downloaded but the content hash does not match. ' \
-                              'The repo may be outdated or download may be incomplete. ' \
-                              'If the "repo_url" is overridden, consider switching to ' \
-                              'the default repo.'.format(fname))
 
     return fname
 
@@ -144,28 +101,22 @@ def extractor(args, file, extension, path='./'):
         Whether to keep compressed file after extracting
     """
     print(f"Extracting {file} ...")
-    try:
-        if extension in ('.tar', '.tar.gz', '.tgz'):
-            with tarfile.open(file) as tar:
-                members = tar.getmembers()
-                extractProgress(tar, members, path)
-        elif extension == '.zip':
-            with zipfile.ZipFile(file, 'r') as zf:
-                members = zf.infolist()
-                extractProgress(zf, members, path)    
-        else:
-            raise "File extension must be in ('.tar', '.tar.gz', '.tgz', '.zip')"
-    except Exception as e:
-        raise e
+    if extension in ('.tar', '.tar.gz', '.tgz'):
+        with tarfile.open(file) as tar:
+            members = tar.getmembers()
+            extractProgress(tar, members, path)
+    elif extension == '.zip':
+        with zipfile.ZipFile(file, 'r') as zf:
+            members = zf.infolist()
+            extractProgress(zf, members, path)    
+    else:
+        raise "File extension must be in ('.tar', '.tar.gz', '.tgz', '.zip')"
     if not args.keep:
         os.remove(file)
 
 def extractProgress(archive, members, path):
     for member in tqdm(iterable=members, total=len(members)):
-        try:
-            archive.extract(member=member, path=path)
-        except Exception as e:       
-            raise e
+        archive.extract(member=member, path=path)
 
 if __name__ == '__main__':
     args = parse_args()

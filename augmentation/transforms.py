@@ -15,10 +15,10 @@ def get_pre_transform():
     ])
     return tf
 
-def get_transform():
+def get_final_transform():
     tf = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
+        transforms.Normalize(mean=mean, std=std),
     ])
     return tf
 

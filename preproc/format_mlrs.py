@@ -29,6 +29,8 @@ def generate_npy(split_path, meta_path, cat2id, args):
     """
     os.makedirs(meta_path, exist_ok=True)
     
+    #TODO
+
     cat2id_f = meta_path + '/cat2id.npy'
     id2cat_f = meta_path + '/id2cat.npy'
     

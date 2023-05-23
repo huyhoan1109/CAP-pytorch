@@ -44,9 +44,9 @@ def get_lr(optimizer):
     return sum(lrs) / len(lrs)
 
 def save_checkpoints(
+    current_iter,
+    total_iter,
     current_epoch,
-    current_iter, 
-    total_iter, 
     total_epoch, 
     model,
     ema,

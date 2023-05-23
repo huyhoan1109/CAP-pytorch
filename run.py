@@ -6,7 +6,7 @@ from datasets import SemiData
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-from models.BaseNet import BaseNet
+from CAP.models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
 from augmentation.transforms import get_pre_transform, get_multi_transform
@@ -19,7 +19,7 @@ def parse_args():
         epilog='Example: python run.py',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--dataset', type=str, default='voc2012', help='Using dataset with model')
+    parser.add_argument('--dataset', type=str, default='voc2012', choices=DATASET_INFO.keys(), help='Using dataset with model')
     parser.add_argument('--train', type=str2bool, default=True, help='Training semi model')
     parser.add_argument('--eval', type=str2bool, default=False, help='Evaluating semi model')
     parser.add_argument('--use-ema', type=str2bool, default=True, help='Using exponential moving average model')
@@ -145,7 +145,7 @@ def get_optimizer(args, model):
         raise 'Optimizer not available!'
     return optimizer
 
-def train_model(args, model, loaders=None, ema=None, optimizer=None, scheduler=None):
+def train_model(args, loaders, model, ema=None, optimizer=None, scheduler=None):
     
     labeled_loader = loaders.get('labeled', None)
     unlabeled_loader = loaders.get('unlabeled', None)
@@ -166,61 +166,27 @@ def train_model(args, model, loaders=None, ema=None, optimizer=None, scheduler=N
     if total_epoch is None:
         total_epoch = TOTAL_EPOCH
     
-    gamma_bank = None
     warpup_epoch = WARMUP_EPOCH
-    run_times = 0
-    
     for epoch in range(last_epoch, total_epoch):
-        current_iter = 0
-        for labeled_info, unlabeled_info in zip(labeled_loader, unlabeled_loader):       
+        curr_iter = 0
+        for batch in zip(labeled_loader, unlabeled_loader):
+            curr_iter += 1     
             model.train()
             if ema is not None:
-                model.train()
-            
-            current_iter += 1
-            run_times += 1
-            X_lb = labeled_info['X']
-            y_lb = labeled_info['y']
-            batch_lb = X_lb.shape[0]
-            
-            if gamma_bank == None:
-                num_classes = y_lb.shape[1]
-                gamma_bank = torch.zeros(num_classes)
-            
-            lb_true = torch.sum((y_lb == 1), dim=0)
-            gamma_bank += lb_true
-            run_times += 1
-            gamma = gamma_bank / (batch_lb * run_times)
-            
+                model.train()            
             if epoch >= warpup_epoch:
-                
-                thresh_low = gamma.clone()
-                thresh_high = 1 - thresh_low
-                alpha = neg_log(thresh_high)
-                beta = neg_log(thresh_low)
-
-                X_ulb = unlabeled_info['X']
-                output_net = model(X_lb, X_ulb, thresh_low, thresh_high)
-
-                loss = compute_batch_loss(output_net, y_lb, unlabeled=True, lambda_u=LAMBDA_U, alpha=alpha, beta=beta)
-            else:
-
-                output_net = model(X_lb)
-                
-                loss = compute_batch_loss(output_net, y_lb)
-            
+                model.semi_mode = True
+            loss = compute_batch_loss(model, batch, lambda_u=LAMBDA_U)        
             if ema is not None:
-                ema.update()
-
+                ema.update()      
             loss.backward()
             optimizer.step()
             scheduler.step()
-            
-            if run_times % args.eval_it == 0 and valid_loader != None: 
+            if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
                 # TODO
                 # Early stoping and evaluating process
                 is_best = False
-                save_checkpoints(epoch, current_iter, total_iter, total_epoch, model, ema, optimizer, scheduler, is_best, args.cp_path)
+                save_checkpoints(curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best, args.cp_path)
 
 def eval_model(args, model, ema=None):
     model.eval()
@@ -231,16 +197,15 @@ def eval_model(args, model, ema=None):
 
 if __name__ == '__main__':
     # TODO
-    # DATASET_INFO[args.dataset]['num_classes']
     args = parse_args()
     backbone = convnextv2_base(20)
-    model = BaseNet(backbone)
-    ema = EMA(model, beta=0.999)
+    num_classes = DATASET_INFO[args.dataset]['num_classes']
+    model = CapNet(backbone, num_classes)
+    ema = EMA(model, beta=args.ema_decay)
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)
     if args.train:
-        train_model(args, model, loaders, ema, optimizer, scheduler)
-    
+        train_model(args, loaders, model, ema, optimizer, scheduler)    
     pass
 

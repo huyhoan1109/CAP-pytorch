@@ -1,7 +1,8 @@
 import torch
 from utils import neg_log
+from models.CapNet import CapNet
 
-def get_bce_loss(labels, preds, masks=None):
+def loss_bce(labels, preds, masks=None):
     
     batch_size = int(labels.size(0))
     num_classes = int(labels.size(1))
@@ -19,15 +20,17 @@ def get_bce_loss(labels, preds, masks=None):
 
     return loss
 
-def get_cap_loss(pseudo_labels, alpha=None, beta=None, masks=None):
-    if alpha == None or beta == None:
+def loss_cap(pseudo_labels, low_thresh=None, masks=None):
+    if low_thresh == None:
         return 0
-    
+
     batch_size = int(pseudo_labels.size(0))
     num_classes = int(pseudo_labels.size(1))
     demon_mtx = (batch_size * num_classes) * torch.ones_like(pseudo_labels)
     
     loss_mtx = pseudo_labels.clone()
+    beta = neg_log(low_thresh)
+    alpha = neg_log(1 - low_thresh)
     loss_mtx = alpha * loss_mtx + beta * (1-loss_mtx) 
     
     if isinstance(masks, torch.Tensor) :
@@ -38,14 +41,22 @@ def get_cap_loss(pseudo_labels, alpha=None, beta=None, masks=None):
 
     return loss
 
-def compute_batch_loss(output_net, y_lb, unlabeled=False, lambda_u=None, alpha=None, beta=None):
-    if unlabeled:
-        assert lambda_u == None
-        logits_lb, pseudo_labels, s_logits_ulb, masks = output_net
-        lb_loss = get_bce_loss(y_lb, logits_lb)
-        cap_loss = get_cap_loss(pseudo_labels, alpha, beta, masks)
-        ulb_loss = get_bce_loss(pseudo_labels, s_logits_ulb, masks) - cap_loss
-        return lb_loss + lambda_u * ulb_loss 
+def compute_batch_loss(model, batch, lambda_u):
+    X_lb = batch[0]['X']
+    y_lb = batch[0]['y']
+    X_ulb = batch[1]['X']
+    preds = model(X_lb, y_lb, X_ulb)
+    lb_logits = preds['lb_logits']
+    lb_loss = loss_bce(y_lb, lb_logits)
+    if model.semi_mode:
+        pseudo_lb = preds['pseudo_lb']
+        s_logits = preds['s_logits']
+        masks = preds['masks']
+        ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
+        if isinstance(model, CapNet):
+            low_thresh = preds['low_thresh']
+            cap_loss = loss_cap(pseudo_lb, low_thresh, masks)
+            ulb_loss = ulb_loss - cap_loss
     else:
-        logits_lb = output_net
-        return get_bce_loss(y_lb, logits_lb)
+        ulb_loss = 0
+    return lb_loss + lambda_u * ulb_loss

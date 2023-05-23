@@ -55,6 +55,7 @@ SCHEDULER = {
 
 DATASET_INFO = {
     'voc2012': {
+        'num_classes': 20,
         'root': f'{DATA_PATH}',
         'meta': f'{DATA_PATH}/metadata/voc2012',
         'images': f'{DATA_PATH}/VOCdevkit/VOC2012/JPEGImages',
@@ -67,6 +68,7 @@ DATASET_INFO = {
     },
 
     'cub': {
+        'num_classes': 200,
         'root': f'{DATA_PATH}/cub',
         'meta': f'{DATA_PATH}/metadata/cub',
         'images': f'{DATA_PATH}/cub/CUB_200_2011/images',

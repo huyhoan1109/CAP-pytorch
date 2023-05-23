@@ -6,7 +6,7 @@ from datasets import SemiData
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-from models.CapNet import CapNet
+from CAP.models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
 from augmentation.transforms import get_pre_transform, get_multi_transform

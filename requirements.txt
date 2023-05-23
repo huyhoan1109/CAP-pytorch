@@ -1,5 +1,4 @@
 torch
-wandb
 numpy
 pandas
 sklearn

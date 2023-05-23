@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='voc2012', choices=DATASET_INFO.keys(), help='Dataset to download')
     parser.add_argument('--name', type=str, default='archive.zip', help='Name of compressed file')
     parser.add_argument('--overwrite', type=str2bool, default=False, help='Overwriting download dataset')
-    parser.add_argument('--keep', type=str2bool, default=False, help='Keep compressed file after extracting')
+    parser.add_argument('--keep', type=str2bool, default=True, help='Keep compressed file after extracting')
     args = parser.parse_args()
     return args
 

@@ -20,8 +20,8 @@ def loss_bce(labels, preds, masks=None):
 
     return loss
 
-def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
-    if t_a == None:
+def loss_cap(pseudo_labels, low_thresh=None, masks=None):
+    if low_thresh == None:
         return 0
 
     batch_size = int(pseudo_labels.size(0))
@@ -29,9 +29,9 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     demon_mtx = (batch_size * num_classes) * torch.ones_like(pseudo_labels)
     
     loss_mtx = pseudo_labels.clone()
-    alpha = neg_log(t_a)
-    beta = neg_log(t_b)
-    loss_mtx = alpha * loss_mtx + beta * (1 - loss_mtx) 
+    beta = neg_log(low_thresh)
+    alpha = neg_log(1 - low_thresh)
+    loss_mtx = alpha * loss_mtx + beta * (1-loss_mtx) 
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
@@ -41,7 +41,7 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
 
     return loss
 
-def compute_batch_loss(model, batch, lambda_u, use_asl_loss=False):
+def compute_batch_loss(model, batch, lambda_u):
     X_lb = batch[0]['X']
     y_lb = batch[0]['y']
     X_ulb = batch[1]['X']
@@ -54,9 +54,8 @@ def compute_batch_loss(model, batch, lambda_u, use_asl_loss=False):
         masks = preds['masks']
         ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
         if isinstance(model, CapNet):
-            t_a = preds['t_a']
-            t_b = preds['t_b']
-            cap_loss = loss_cap(pseudo_lb, t_a, t_b, masks)
+            low_thresh = preds['low_thresh']
+            cap_loss = loss_cap(pseudo_lb, low_thresh, masks)
             ulb_loss = ulb_loss - cap_loss
     else:
         ulb_loss = 0

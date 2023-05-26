@@ -7,11 +7,13 @@ from dotenv import load_dotenv
 from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 
 class WandbLogger():
-    def __init__(self, args, anonymous=None) -> None:
+    def __init__(self, args, key, anonymous=None) -> None:
         load_dotenv('.env')
         self.args = args
         self.logger = wandb
-        self.key = os.getenv('WANDB_API_KEY') 
+        if key == None:
+            load_dotenv('.env')
+            self.key = os.getenv('WANDB_API_KEY') 
         self.project = 'CAP'
         self.log_dir = 'logs'
         self.secret = anonymous

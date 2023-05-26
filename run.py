@@ -14,7 +14,6 @@ from datasets import SemiData
 from models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
-from augmentation.transforms import get_pre_transform, get_multi_transform
 from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter
 from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP
 
@@ -233,7 +232,7 @@ if __name__ == '__main__':
         'MAP': MAP()
     }
 
-    logger = WandbLogger(args)
+    logger = WandbLogger(args, '4a4edf57140d746df80b213d934913111fdc8143')
     if args.train:
         train_model(args, logger, trackers, performances, loaders, model, ema, optimizer, scheduler)    
     pass

@@ -12,6 +12,7 @@ from datasets import SemiData
 from models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
+from backbone.resnet import ResNet50
 from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter
 from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP
 
@@ -213,8 +214,9 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 if __name__ == '__main__':
     # TODO
     args = parse_args()
-    backbone = convnextv2_base(20)
+    # backbone = convnextv2_base(20)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
+    backbone = ResNet50(num_classes)
     model = CapNet(backbone, num_classes, args.device)
     ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)

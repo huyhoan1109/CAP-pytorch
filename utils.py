@@ -5,7 +5,7 @@ import numpy as np
 from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 
 class WandbLogger():
-    def __init__(self, args, key, anonymous=None) -> None:
+    def __init__(self, args, key, anonymous='must') -> None:
         self.args = args
         import wandb
         self.logger = wandb

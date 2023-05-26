@@ -1,6 +1,5 @@
 import os
 import torch
-import wandb
 import shutil
 import numpy as np
 from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
@@ -8,6 +7,7 @@ from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 class WandbLogger():
     def __init__(self, args, key, anonymous=None) -> None:
         self.args = args
+        import wandb
         self.logger = wandb
         # if key == None:
         #     from dotenv import load_dotenv
@@ -41,7 +41,13 @@ class WandbLogger():
         )
         model.add_dir(cp_dir)
         self.logger.log_artifact(model, aliases=["latest"])
-    
+
+    def set_steps(self):
+
+        self.logger.define_metric('trainer/global_step')
+        self.logger.define_metric('train/*', step_metric='trainer/global_step')
+        self.logger.define_metric('val/*', step_metric='trainer/epoch')
+
     def finish(self):
         self.logger.finish()        
 

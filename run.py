@@ -168,6 +168,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     batch = {}
     best_accuracy = 0
     stop_count = 0
+    logger.set_steps()
     for epoch in range(last_epoch, total_epoch):
         curr_iter = 0
         for lb_batch, ulb_batch in enumerate((labeled_loader, unlabeled_loader)):
@@ -179,7 +180,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
             
             batch['lb'] = lb_batch
             batch['ulb'] = ulb_batch
-            
+            logger.log({'trainer/global_step': curr_iter + epoch * total_iter})
             loss, _ = compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
             
             ema.update() if ema is not None else None           

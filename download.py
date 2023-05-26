@@ -3,7 +3,6 @@ import os
 import re
 import zipfile
 import tarfile 
-import hashlib
 import requests
 import argparse
 from tqdm import tqdm

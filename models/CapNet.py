@@ -3,16 +3,17 @@ import torch
 import torch.nn as nn
 
 class CapNet(nn.Module):
-    def __init__(self, network, num_classes, n_0=1, n_1=1, run_time=0, T=1, semi_mode=False):
+    def __init__(self, network, num_classes, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False):
         super(CapNet, self).__init__()
         self.network = copy.deepcopy(network)
         self.num_classes = num_classes
         self.T = T
         self.n_0 = n_0
         self.n_1 = n_1
-        self.run_times = run_time
+        self.bs_counter = bs_counter
         self.semi_mode = semi_mode
         self.true_bank = torch.zeros(self.num_classes)
+        self.update_bank = True
     
     def forward(self, X_lb, y_lb, X_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
@@ -20,6 +21,11 @@ class CapNet(nn.Module):
         X = X_lb.permute(0, 3, 1, 2)
         num_lb = X_lb.shape[0]
         
+        if self.update_bank:
+            self.true_bank += torch.sum((y_lb == 1), dim=0).clone()
+            self.bs_counter += num_lb
+
+        # semi_mode == True => train with both labeled and unlabeled data
         if self.semi_mode:
             
             # X_ulb = (w_ulb, s_ulb)
@@ -34,39 +40,50 @@ class CapNet(nn.Module):
             # choose indexes from sorted soft_labels (f(x)) 
             # so that only f(x) (%) is >= t_a
             soft_labels = torch.sigmoid(w_logits / self.T)
-            sft_tp = soft_labels.clone().permute(1, 0)
-            thresh_indices = (num_ulb * self.gamma).int()
-            sft_mx, _ = sft_tp.sort(descending=True) 
-            t_a = torch.zeros(self.num_classes)      
-            for i in range(self.num_classes):
-                t_a[i] = sft_mx[i, thresh_indices[i]]
-            t_b = 1 - t_a
-            t_a = self.n_0 * t_a
-            t_b = self.n_1 * t_b
             
+            # first transpose the sft_tp => (num_classes, sorted(batch))
+            sft_tp = soft_labels.clone().permute(1, 0)
+
+            # gamma hold distribution of positve label in labeled dataset
+            # and ro hold distribution of negative label in labeled dataset
+            gamma = self.true_bank / self.bs_counter 
+            ro = 1 - gamma
+            gamma = self.n_0 * gamma
+            ro = self.n_1 * ro
+
+            # calculate t_a (high threshold) and t_b (low threshold)
+            sft_max, _ = sft_tp.sort(descending=True)
+            sft_min, _ = sft_tp.sort()
+
+            # init t_a and t_b
+            t_a = torch.zeros(self.num_classes)
+            t_b = torch.zeros(self.num_classes)
+
+            # ids of high and low threshold 
+            t_a_ids = (num_ulb * gamma).int()
+            t_b_ids = (num_ulb * ro).int()
+
+            # calculate t_a and t_b base on t_a_ids, t_b_ids
+            for i in range(self.num_classes):
+                t_a = sft_max[i, t_a_ids[i]]
+                t_b = sft_min[i, t_b_ids[i]]
+
             # make pseudo_labels and masks
             masks = torch.where((soft_labels <= t_b) | (soft_labels >= t_a), 1, 0).float()
-            pseudo_labels = torch.where(soft_labels >= 0.5, 1, -1).long()       
-            
+            pseudo_labels = torch.where(soft_labels >= 0.5, 1, -1).long()                   
             results = {
-                'lb_logits': lb_logits,
+                'logits': lb_logits,
                 'pseudo_lb': pseudo_labels,
                 's_logits': s_logits,
                 'masks': masks,
                 't_a': t_a,
                 't_b': t_b
             } 
-        
         else:
-            
             # else train with labeled data and update gamma
             lb_logits = self.network(X)
-            self.run_times += 1
-            self.true_bank += torch.sum((y_lb == 1), dim=0).clone()
-            self.gamma = self.true_bank / (num_lb * self.run_times) 
             lb_logits = torch.sigmoid(lb_logits / self.T)
-            
             results = {
-                'lb_logits': lb_logits
+                'logits': lb_logits
             } 
         return results

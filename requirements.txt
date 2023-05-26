@@ -1,5 +1,6 @@
 torch
 numpy
+wandb
 pandas
 sklearn
 openpyxl

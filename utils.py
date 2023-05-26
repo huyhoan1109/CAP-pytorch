@@ -3,29 +3,31 @@ import torch
 import wandb
 import shutil
 import numpy as np
+from dotenv import load_dotenv
 from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 
 class WandbLogger():
-    def __init__(self, args) -> None:
+    def __init__(self, args, anonymous=None) -> None:
+        load_dotenv('.env')
         self.args = args
         self.logger = wandb
+        self.key = os.getenv('WANDB_API_KEY') 
+        self.project = 'CAP'
+        self.log_dir = 'logs'
+        self.secret = anonymous
         self.init()
 
     def init(self):
-        proj = self.args.proj
-        log_dir = self.args.log_dir
-        config = self.args.config
         if self.logger.run is None:
-            self.logger.login(anonymous='must')
-            os.makedirs(log_dir, exist_ok=True)   
+            self.logger.login(key=self.key, anonymous=self.secret)
+            os.makedirs(self.log_dir, exist_ok=True)   
             self.logger.init(
-                project = proj,
-                dir = log_dir,
-                config = config
+                project = self.project,
+                dir = self.log_dir,
             )
 
-    def log(self, state):
-        self.logger.log(state)
+    def log(self, state, commit=True):
+        self.logger.log(state, commit=commit)
 
     def save_checkpoints(self):
         print("Uploading checkpoints to wandb ...")
@@ -44,6 +46,7 @@ def get_lr(optimizer):
     return sum(lrs) / len(lrs)
 
 def save_checkpoints(
+    checkpoint_path,
     current_iter,
     total_iter,
     current_epoch,
@@ -53,7 +56,6 @@ def save_checkpoints(
     optimizer,
     scheduler,
     is_best,
-    checkpoint_path
     ):
 
     state = {
@@ -114,24 +116,19 @@ def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None, loa
 
 class AverageMeter():
     """Computes and stores the average and current value"""
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.reset()
 
     def reset(self):
-        self.val = 0
-        self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
-        self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / self.count
-    
-    def __call__(self):
-        return self.avg
+
+    def show(self):
+        return self.sum / self.count
     
 def str2bool(v):
     """

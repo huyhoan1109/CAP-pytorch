@@ -106,3 +106,5 @@ ID2CAT = {
 }
 
 CHUNK_SIZE = 1024
+
+MAX_ESTOP = 5

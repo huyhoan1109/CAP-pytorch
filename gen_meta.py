@@ -29,17 +29,17 @@ def generate_meta(args):
         cat2id = CAT2ID[dataset]
         split_path = DATASET_INFO[dataset]['split']
         format_voc.generate_npy(split_path, meta, cat2id, args)
-    elif dataset == 'cub':        
-        cat2id = {}
-        data_path = DATASET_INFO[dataset]['root'] + '/CUB_200_2011'
-        class_path = data_path + '/classes.txt'
-        with open(class_path, 'r') as f:
-            for line in f:
-                curr_line = line.rsplit()
-                Id = int(curr_line[0]) - 1
-                label = curr_line[-1]
-                cat2id[label] = Id
-        format_cub.generate_npy(data_path, meta, cat2id, args)
+    # elif dataset == 'cub':        
+    #     cat2id = {}
+    #     data_path = DATASET_INFO[dataset]['root'] + '/CUB_200_2011'
+    #     class_path = data_path + '/classes.txt'
+    #     with open(class_path, 'r') as f:
+    #         for line in f:
+    #             curr_line = line.rsplit()
+    #             Id = int(curr_line[0]) - 1
+    #             label = curr_line[-1]
+    #             cat2id[label] = Id
+    #     format_cub.generate_npy(data_path, meta, cat2id, args)
     else:
         raise NotImplementedError('Dataset not available!')
 

@@ -1,5 +1,5 @@
 import torch
-from utils import neg_log
+from utils import neg_log, AverageMeter
 from models.CapNet import CapNet
 
 def loss_asl(labels, preds, masks=None, gamma_neg=1, gamma_pos=1):
@@ -62,29 +62,68 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
 
     return loss
 
-def compute_batch_loss(args, model, lb_batch, ulb_batch, lambda_u):
-    X_lb = lb_batch['X']
-    y_lb = lb_batch['y']
-    X_ulb = ulb_batch['X']
-    preds = model(X_lb, y_lb, X_ulb)
-    lb_logits = preds['lb_logits']
-    if args.use_asl:
-        lb_loss = loss_asl(y_lb, lb_logits)
-    else:
-        lb_loss = loss_bce(y_lb, lb_logits)
-    if model.semi_mode:
-        pseudo_lb = preds['pseudo_lb']
-        s_logits = preds['s_logits']
-        masks = preds['masks']
+def compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u, mode='train'):
+    
+    accuracy = None
+    loss = 0
+    
+    if mode == 'train':
+        X_lb = batch['lb']['X']
+        y_lb = batch['lb']['y']
+        X_ulb = batch['ulb']['X']
+        preds = model(X_lb, y_lb, X_ulb)
+        lb_logits = preds['logits']
         if args.use_asl:
-            ulb_loss = loss_asl(pseudo_lb, s_logits, masks)
+            lb_loss = loss_asl(y_lb, lb_logits)
         else:
-            ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
+            lb_loss = loss_bce(y_lb, lb_logits)
+        trackers['train']['lb_loss'].update(lb_loss.items())
+        logger.log({'train/lb_loss': '{:05.3f}'.format(trackers['train']['lb_loss'].show())}, commit=False)
+        loss = lb_loss
+        if model.semi_mode:
+            pseudo_lb = preds['pseudo_lb']
+            s_logits = preds['s_logits']
+            masks = preds['masks']
+            if args.use_asl:
+                ulb_loss = loss_asl(pseudo_lb, s_logits, masks)
+            else:
+                ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
+            trackers['train']['ulb_loss'].update(ulb_loss.items())
+            logger.log({'train/ulb_loss': '{:05.3f}'.format(trackers['train']['ulb_loss'].show())}, commit=False)
+            loss += lambda_u * ulb_loss
+            
+            if isinstance(model, CapNet):
+                t_a = preds['t_a']
+                t_b = preds['t_b']
+                cap_loss = loss_cap(pseudo_lb, t_a, t_b, masks)
+                trackers['train']['cap_loss'].update(cap_loss)
+                logger.log({'train/ulb_loss': '{:05.3f}'.format(trackers['train']['cap_loss'].show())}, commit=False)
+                loss -= lambda_u * cap_loss
+        trackers['train']['main_loss'].update(loss)
+        logger.log({'train/main_loss': '{:05.3f}'.format(trackers['train']['main_loss'].show())}, commit = False)
+    
+    elif mode == 'valid':
+        X_valid = batch['valid']['X']
+        y_valid = batch['valid']['y']
+        
+        prev = {}
+
+        prev['semi_mode'] = model.semi_mode
+        model.semi_mode = False
         if isinstance(model, CapNet):
-            t_a = preds['t_a']
-            t_b = preds['t_b']
-            cap_loss = loss_cap(pseudo_lb, t_a, t_b, masks)
-            ulb_loss = ulb_loss - cap_loss
-    else:
-        ulb_loss = 0
-    return lb_loss + lambda_u * ulb_loss
+            prev['update_bank'] = model.update_bank
+            model.update_bank = False
+        
+        preds = model(X_valid, y_valid)['logits']
+        loss = loss_asl(y_valid, preds)
+        
+        model.semi_mode = prev['semi_mode']
+        if isinstance(model, CapNet):
+            model.update_bank = prev['update_bank']
+        
+        trackers['valid']['loss'].update(loss)
+        accuracy = performances['MAP'].scoring(y_valid, preds)
+        logger.log({'val/loss': '{:05.3f}'.format(trackers['valid']['loss'].show())}, commit=False),
+        logger.log({'val/acc: {:05.5f}'.format(accuracy)}, commit=False)
+    
+    return loss, accuracy

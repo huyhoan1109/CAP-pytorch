@@ -1,18 +1,22 @@
 import os
 import argparse
+from tqdm import tqdm
+from dotenv import load_dotenv
+
 
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 
+from metrics.MAP import MAP
 from MA.EMA import EMA
 from datasets import SemiData
 from models.CapNet import CapNet
 from losses import compute_batch_loss
 from backbone.convnext2 import convnextv2_base
 from augmentation.transforms import get_pre_transform, get_multi_transform
-from utils import save_checkpoints, load_checkpoints, str2bool
-from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL
+from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter
+from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -142,7 +146,7 @@ def get_optimizer(args, model):
         raise 'Optimizer not available!'
     return optimizer
 
-def train_model(args, loaders, model, ema=None, optimizer=None, scheduler=None):
+def train_model(args, logger, trackers, performances, loaders, model, ema=None, optimizer=None, scheduler=None):
     
     labeled_loader = loaders.get('labeled', None)
     unlabeled_loader = loaders.get('unlabeled', None)
@@ -164,30 +168,43 @@ def train_model(args, loaders, model, ema=None, optimizer=None, scheduler=None):
         total_epoch = TOTAL_EPOCH
     
     warpup_epoch = WARMUP_EPOCH
+    batch = {}
+    best_accuracy = 0
+    stop_count = 0
     for epoch in range(last_epoch, total_epoch):
         curr_iter = 0
         for lb_batch, ulb_batch in zip(labeled_loader, unlabeled_loader):
-            curr_iter += 1     
-            # model.train()
-            # if ema is not None:
-            #     model.train()            
-            # if epoch >= warpup_epoch:
-            #     model.semi_mode = True
-            # loss = compute_batch_loss(args, model, lb_batch, ulb_batch, lambda_u=LAMBDA_U)        
-            # if ema is not None:
-            #     ema.update()      
-            # loss.backward()
-            # optimizer.step()
-            # scheduler.step()
-            # if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
-            #     # TODO
-            #     # Early stoping and evaluating process
-            #     is_best = False
-            #     save_checkpoints(curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best, args.cp_path)
-
-def eval_model(args, model, ema=None):
-    model.eval()
-    # TODO    
+            curr_iter += 1
+            if last_iter >= curr_iter and epoch == last_epoch:
+                continue
+            
+            model.semi_mode = True if epoch >= warpup_epoch else False
+            
+            batch['lb'] = lb_batch
+            batch['ulb'] = ulb_batch
+            
+            loss, _ = compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
+            
+            ema.update() if ema is not None else None           
+            
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+            
+            if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
+                is_best = False
+                for valid_batch in zip(valid_loader):
+                    batch['valid'] = valid_batch
+                    loss, accuracy = compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='valid')        
+                    if accuracy >= best_accuracy:
+                        best_accuracy = accuracy
+                        is_best = True
+                        stop_count = 0
+                    else:
+                        stop_count += 1
+                        if stop_count >= MAX_ESTOP:
+                            break
+                    save_checkpoints(args.cp_path, curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
 
 
 if __name__ == '__main__':
@@ -200,7 +217,24 @@ if __name__ == '__main__':
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)
+    trackers = {
+        'train': {
+            'lb_loss': AverageMeter(),
+            'ulb_loss': AverageMeter(),
+            'cap_loss': AverageMeter(),
+            # 'items': {} 
+        },
+        'val': {
+            'loss': AverageMeter(),
+            # 'items': {}
+        }
+    }
+    performances = {
+        'MAP': MAP()
+    }
+
+    logger = WandbLogger(args)
     if args.train:
-        train_model(args, loaders, model, ema, optimizer, scheduler)    
+        train_model(args, logger, trackers, performances, loaders, model, ema, optimizer, scheduler)    
     pass
 

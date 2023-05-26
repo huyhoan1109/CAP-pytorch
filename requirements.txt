@@ -2,7 +2,6 @@ torch
 numpy
 wandb
 pandas
-dotenv
 sklearn
 openpyxl
 torchvision

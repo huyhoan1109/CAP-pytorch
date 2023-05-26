@@ -3,17 +3,19 @@ import torch
 import wandb
 import shutil
 import numpy as np
-from dotenv import load_dotenv
 from config import LAST_MODEL, BEST_MODEL, NEG_EPSILON
 
 class WandbLogger():
     def __init__(self, args, key, anonymous=None) -> None:
-        load_dotenv('.env')
         self.args = args
         self.logger = wandb
-        if key == None:
-            load_dotenv('.env')
-            self.key = os.getenv('WANDB_API_KEY') 
+        # if key == None:
+        #     from dotenv import load_dotenv
+        #     load_dotenv('.env')
+        #     self.key = os.getenv('WANDB_API_KEY') 
+        # else:
+        #     self.key = key
+        self.key = key
         self.project = 'CAP'
         self.log_dir = 'logs'
         self.secret = anonymous

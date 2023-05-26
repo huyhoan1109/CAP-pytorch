@@ -1,8 +1,6 @@
 import os
 import argparse
 from tqdm import tqdm
-from dotenv import load_dotenv
-
 
 from torch import optim
 from torch.optim import lr_scheduler

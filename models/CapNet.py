@@ -18,7 +18,7 @@ class CapNet(nn.Module):
     def forward(self, X_lb, y_lb, X_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
-        X = X_lb.permute(0, 3, 1, 2)
+        X = X_lb
 
         num_lb = X_lb.shape[0]
         
@@ -31,8 +31,8 @@ class CapNet(nn.Module):
             
             # X_ulb = (w_ulb, s_ulb)
             num_ulb = X_ulb[0].shape[0]
-            w_ulb = X_ulb[0].permute(0, 3, 1, 2)
-            s_ulb = X_ulb[1].permute(0, 3, 1, 2)
+            w_ulb = X_ulb[0]
+            s_ulb = X_ulb[1]
             inputs = torch.cat((X, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.sigmoid(logits[:num_lb] / self.T)

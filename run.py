@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument('--sch', type=int, default=1, choices=SCHEDULER.keys(), help='Choose scheduler type')
     parser.add_argument('--opt', type=int, default=1, choices=OPTIMIZER.keys(), help='Choose optimizer type')    
     parser.add_argument('--use-asl', type=str2bool, default=True, help='Whether to use ASL loss')
+    parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'], help='Training device')
     args = parser.parse_args()
     return args
 
@@ -41,6 +42,7 @@ def get_loaders(args):
     labeled_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
+        device=args.device
     )
     
     labeled_loader = DataLoader(
@@ -53,20 +55,22 @@ def get_loaders(args):
     unlabeled_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
-        mode='unlabeled'
+        mode='unlabeled',
+        device=args.device
     )
     
     unlabeled_loader = DataLoader(
         unlabeled_dataset, 
         64, 
         True,
-        drop_last=True
+        drop_last=True,
     )
     
     valid_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO[dataset]['meta'], 
-        mode='valid'
+        mode='valid',
+        device=args.device
     )
     
     valid_loader = DataLoader(
@@ -79,7 +83,8 @@ def get_loaders(args):
     test_dataset = SemiData(
         DATASET_INFO[dataset]['images'], 
         DATASET_INFO['voc2012']['meta'], 
-        mode='test'
+        mode='test',
+        device=args.device
     )
     
     test_loader = DataLoader(

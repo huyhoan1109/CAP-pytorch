@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from utils import str2bool, load_npy_pkl
 from config import CAT2ID, ID2CAT, DATASET_INFO
-from preproc import format_voc, format_cub, format_mlrs
+from preproc import format_voc, format_cub
 
 def parse_args():
     parser = argparse.ArgumentParser(

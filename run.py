@@ -170,7 +170,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     stop_count = 0
     for epoch in range(last_epoch, total_epoch):
         curr_iter = 0
-        for lb_batch, ulb_batch in zip(labeled_loader, unlabeled_loader):
+        for lb_batch, ulb_batch in enumerate((labeled_loader, unlabeled_loader)):
             curr_iter += 1
             if last_iter >= curr_iter and epoch == last_epoch:
                 continue
@@ -214,6 +214,7 @@ if __name__ == '__main__':
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)
+    
     trackers = {
         'train': {
             'lb_loss': AverageMeter(),

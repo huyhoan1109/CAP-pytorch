@@ -19,6 +19,7 @@ class CapNet(nn.Module):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
         X = X_lb.permute(0, 3, 1, 2)
+
         num_lb = X_lb.shape[0]
         
         if self.update_bank:

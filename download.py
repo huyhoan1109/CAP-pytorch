@@ -102,20 +102,14 @@ def extractor(args, file, extension, path='./'):
     print(f"Extracting {file} ...")
     if extension in ('.tar', '.tar.gz', '.tgz'):
         with tarfile.open(file) as tar:
-            members = tar.getmembers()
-            extractProgress(tar, members, path)
+            tar.extractall(path)
     elif extension == '.zip':
         with zipfile.ZipFile(file, 'r') as zf:
-            members = zf.infolist()
-            extractProgress(zf, members, path)    
+            zf.extractall(path)   
     else:
         raise "File extension must be in ('.tar', '.tar.gz', '.tgz', '.zip')"
     if not args.keep:
         os.remove(file)
-
-def extractProgress(archive, members, path):
-    for member in tqdm(iterable=members, total=len(members)):
-        archive.extract(member=member, path=path)
 
 if __name__ == '__main__':
     args = parse_args()

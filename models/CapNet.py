@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 class CapNet(nn.Module):
-    def __init__(self, network, num_classes, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False):
+    def __init__(self, network, num_classes, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False, device='cuda'):
         super(CapNet, self).__init__()
         self.network = copy.deepcopy(network)
         self.num_classes = num_classes
@@ -12,7 +12,8 @@ class CapNet(nn.Module):
         self.n_1 = n_1
         self.bs_counter = bs_counter
         self.semi_mode = semi_mode
-        self.true_bank = torch.zeros(self.num_classes)
+        self.device = device
+        self.true_bank = torch.zeros(self.num_classes).to(self.device)
         self.update_bank = True
     
     def forward(self, X_lb, y_lb, X_ulb=None):
@@ -23,7 +24,7 @@ class CapNet(nn.Module):
         num_lb = X_lb.shape[0]
         
         if self.update_bank:
-            self.true_bank += torch.sum((y_lb == 1), dim=0).clone()
+            self.true_bank += torch.sum((y_lb == 1), dim=0).clone().to(self.device)
             self.bs_counter += num_lb
 
         # semi_mode == True => train with both labeled and unlabeled data
@@ -57,8 +58,8 @@ class CapNet(nn.Module):
             sft_min, _ = sft_tp.sort()
 
             # init t_a and t_b
-            t_a = torch.zeros(self.num_classes)
-            t_b = torch.zeros(self.num_classes)
+            t_a = torch.zeros(self.num_classes).to(self.device)
+            t_b = torch.zeros(self.num_classes).to(self.device)
 
             # ids of high and low threshold 
             t_a_ids = (num_ulb * gamma).int()

@@ -176,7 +176,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     logger.set_steps()
     for epoch in range(last_epoch, total_epoch):
         curr_iter = 0
-        for lb_batch, ulb_batch in enumerate((labeled_loader, unlabeled_loader)):
+        for idx, (lb_batch, ulb_batch) in enumerate(zip(labeled_loader, unlabeled_loader)):
             curr_iter += 1
             if last_iter >= curr_iter and epoch == last_epoch:
                 continue
@@ -215,8 +215,8 @@ if __name__ == '__main__':
     args = parse_args()
     backbone = convnextv2_base(20)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    model = CapNet(backbone, num_classes)
-    ema = EMA(model, beta=args.ema_decay)
+    model = CapNet(backbone, num_classes, args.device)
+    ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)

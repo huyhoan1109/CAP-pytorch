@@ -20,7 +20,6 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-# TODO
 def generate_meta(args):
     dataset = args.dataset
     meta = DATASET_INFO[dataset]['meta']

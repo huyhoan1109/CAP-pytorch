@@ -35,7 +35,7 @@ class WandbLogger():
 
     def save_checkpoints(self):
         print("Uploading checkpoints to wandb ...")
-        cp_dir = self.args.cp_dir
+        cp_dir = self.args.cp_path
         model = self.logger.Artifact(
             'model' + self.logger.run.id, type='model'
         )
@@ -43,10 +43,9 @@ class WandbLogger():
         self.logger.log_artifact(model, aliases=["latest"])
 
     def set_steps(self):
-
         self.logger.define_metric('trainer/global_step')
         self.logger.define_metric('train/*', step_metric='trainer/global_step')
-        self.logger.define_metric('val/*', step_metric='trainer/epoch')
+        self.logger.define_metric('val/*', step_metric='trainer/global_step')
 
     def finish(self):
         self.logger.finish()        
@@ -81,13 +80,14 @@ def save_checkpoints(
 
     print(f"Saving checkpoint...")
 
+    file_path = os.path.join(checkpoint_path, LAST_MODEL)
+
     if not os.path.exists(checkpoint_path):
-        print(f"Checkpoint {checkpoint_path} does not exist!. Create new checkpoint ...")
+        print(f"Checkpoint folder {checkpoint_path} does not exist!. Create new checkpoint ...")
         os.makedirs(checkpoint_path)
     elif os.path.exists(checkpoint_path) and not is_best:
         print(f"Checkpoint {file_path} does exist!. Override the checkpoint ...")
     
-    file_path = os.path.join(checkpoint_path, LAST_MODEL)
     torch.save(state, file_path)
     
     if is_best:
@@ -176,4 +176,4 @@ def load_meta(path, mode):
     return meta  
 
 def neg_log(x):
-    return - torch.log(x + NEG_EPSILON)
+    return - torch.clamp(torch.log(x), min=-100)

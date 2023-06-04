@@ -14,7 +14,6 @@ class CapNet(nn.Module):
         self.semi_mode = semi_mode
         self.device = device
         self.true_bank = torch.zeros(self.num_classes).to(self.device)
-        self.update_bank = True
     
     def forward(self, X_lb, y_lb, X_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
@@ -23,9 +22,8 @@ class CapNet(nn.Module):
 
         num_lb = X_lb.shape[0]
         
-        if self.update_bank:
-            self.true_bank += torch.sum((y_lb == 1), dim=0).clone().to(self.device)
-            self.bs_counter += num_lb
+        self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
+        self.bs_counter += num_lb
 
         # semi_mode == True => train with both labeled and unlabeled data
         if self.semi_mode:
@@ -54,21 +52,20 @@ class CapNet(nn.Module):
             ro = self.n_1 * ro
 
             # calculate t_a (high threshold) and t_b (low threshold)
-            sft_max, _ = sft_tp.sort(descending=True)
-            sft_min, _ = sft_tp.sort()
+            sft_, _ = sft_tp.sort(descending=True)
 
             # init t_a and t_b
             t_a = torch.zeros(self.num_classes).to(self.device)
             t_b = torch.zeros(self.num_classes).to(self.device)
 
-            # ids of high and low threshold 
-            t_a_ids = (num_ulb * gamma).int()
-            t_b_ids = (num_ulb * ro).int()
+            # ids of high and low threshold (ID is from 0 to batch-1)
+            t_a_ids = ((num_ulb-1) * gamma).int()
+            t_b_ids = ((num_ulb-1) * ro).int()
 
             # calculate t_a and t_b base on t_a_ids, t_b_ids
             for i in range(self.num_classes):
-                t_a = sft_max[i, t_a_ids[i]]
-                t_b = sft_min[i, t_b_ids[i]]
+                t_a = sft_[i, t_a_ids[i]]
+                t_b = sft_[i, t_b_ids[i]]
 
             # make pseudo_labels and masks
             masks = torch.where((soft_labels <= t_b) | (soft_labels >= t_a), 1, 0).float()

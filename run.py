@@ -10,10 +10,10 @@ from metrics.MAP import MAP
 from MA.EMA import EMA
 from datasets import SemiData
 from models.CapNet import CapNet
-from losses import compute_batch_loss
+from losses import compute_loss_accuracy
 from backbone.convnext2 import convnextv2_base
 from backbone.resnet import ResNet50
-from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter
+from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter, get_lr
 from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP
 
 def parse_args():
@@ -30,18 +30,19 @@ def parse_args():
     parser.add_argument('--resume', type=str2bool, default=True, help='Resume training from checkpoint')
     parser.add_argument('--e-stop', type=int, default=5, help='Use early stoping for model training')
     parser.add_argument('--cp-path', type=str, default=CHECKPOINT_PATH, help='Path to a directory that store checkpoints')
-    parser.add_argument('--eval-it', type=int, default=1000, help='Path to a directory that store checkpoints')
     parser.add_argument('--sch', type=int, default=1, choices=SCHEDULER.keys(), help='Choose scheduler type')
     parser.add_argument('--opt', type=int, default=1, choices=OPTIMIZER.keys(), help='Choose optimizer type')    
     parser.add_argument('--use-asl', type=str2bool, default=True, help='Whether to use ASL loss')
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'], help='Training device')
+    parser.add_argument('--eval-it', type=int, default=1000, help='Evaluation iteration')
     args = parser.parse_args()
     return args
 
 def get_loaders(args):
     dataset = args.dataset
+    img_path = DATASET_INFO[dataset]['images']
     labeled_dataset = SemiData(
-        DATASET_INFO[dataset]['images'], 
+        img_path, 
         DATASET_INFO[dataset]['meta'], 
         device=args.device
     )
@@ -54,7 +55,7 @@ def get_loaders(args):
     )
     
     unlabeled_dataset = SemiData(
-        DATASET_INFO[dataset]['images'], 
+        img_path, 
         DATASET_INFO[dataset]['meta'], 
         mode='unlabeled',
         device=args.device
@@ -68,7 +69,7 @@ def get_loaders(args):
     )
     
     valid_dataset = SemiData(
-        DATASET_INFO[dataset]['images'], 
+        img_path, 
         DATASET_INFO[dataset]['meta'], 
         mode='valid',
         device=args.device
@@ -82,7 +83,7 @@ def get_loaders(args):
     )
 
     test_dataset = SemiData(
-        DATASET_INFO[dataset]['images'], 
+        img_path, 
         DATASET_INFO['voc2012']['meta'], 
         mode='test',
         device=args.device
@@ -157,6 +158,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     
     assert labeled_loader != None
     assert unlabeled_loader != None
+    assert valid_loader != None
     
     last_path = os.path.join(args.cp_path, LAST_MODEL)
     last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(last_path, model, ema, optimizer, scheduler)        
@@ -175,49 +177,44 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     best_accuracy = 0
     stop_count = 0
     logger.set_steps()
+    step_loss = AverageMeter()
     for epoch in range(last_epoch, total_epoch):
-        curr_iter = 0
+        if stop_count >= MAX_ESTOP:
+            print('Early stoping ...')
+            break
+        batch['valid'] = next(iter(valid_loader))
         for idx, (lb_batch, ulb_batch) in enumerate(zip(labeled_loader, unlabeled_loader)):
-            curr_iter += 1
-            if last_iter >= curr_iter and epoch == last_epoch:
-                continue
-            
-            model.semi_mode = True if epoch >= warpup_epoch else False
-            
+            logger.log({'trainer/global_step': idx + epoch * total_iter})
             batch['lb'] = lb_batch
             batch['ulb'] = ulb_batch
-            logger.log({'trainer/global_step': curr_iter + epoch * total_iter})
-            loss, _ = compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
-            
+            model.semi_mode = True if epoch >= warpup_epoch else False
+            train_loss, _ = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
             ema.update() if ema is not None else None           
-            
-            loss.backward()
+            step_loss.update(train_loss.item())
+            train_loss.backward()
             optimizer.step()
             scheduler.step()
-            
-            if ((epoch * total_iter + curr_iter) % args.eval_it == 0) and valid_loader != None: 
-                is_best = False
-                for valid_batch in zip(valid_loader):
-                    batch['valid'] = valid_batch
-                    loss, accuracy = compute_batch_loss(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='valid')        
-                    if accuracy >= best_accuracy:
-                        best_accuracy = accuracy
-                        is_best = True
-                        stop_count = 0
-                    else:
-                        stop_count += 1
-                        if stop_count >= MAX_ESTOP:
-                            break
-                    save_checkpoints(args.cp_path, curr_iter, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
+            logger.log({'train/lr': get_lr(optimizer)})
+            if ((epoch * total_iter + idx) % 100 == 0):
+                print('Epoch[{}/{}] Iter[{}/{}]: {:05.3f}'.format(epoch+1, total_epoch, idx+1, total_iter, step_loss.show()))
 
+            if ((epoch * total_iter + idx) % args.eval_it == 0):
+                _, accuracy = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='valid')
+                is_best = False
+                save_checkpoints(args.cp_path, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
+                if accuracy < best_accuracy:
+                    stop_count += 1
+                    break
+                else:
+                    is_best = True
+                    best_accuracy = accuracy
+                    save_checkpoints(args.cp_path, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
 
 if __name__ == '__main__':
-    # TODO
     args = parse_args()
-    # backbone = convnextv2_base(20)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
     backbone = ResNet50(num_classes)
-    model = CapNet(backbone, num_classes, args.device)
+    model = CapNet(backbone, num_classes, device=args.device)
     ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
@@ -228,11 +225,10 @@ if __name__ == '__main__':
             'lb_loss': AverageMeter(),
             'ulb_loss': AverageMeter(),
             'cap_loss': AverageMeter(),
-            # 'items': {} 
+            'main_loss': AverageMeter()
         },
         'val': {
             'loss': AverageMeter(),
-            # 'items': {}
         }
     }
     performances = {
@@ -243,4 +239,3 @@ if __name__ == '__main__':
     if args.train:
         train_model(args, logger, trackers, performances, loaders, model, ema, optimizer, scheduler)    
     pass
-

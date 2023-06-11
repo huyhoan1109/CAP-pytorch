@@ -13,7 +13,7 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--dataset', type=str, default='voc2012', choices=DATASET_INFO.keys(), help='Dataset to generate metadata')
-    parser.add_argument('--labeled', type=float, default=0.2, help='Labeled dataset size')
+    parser.add_argument('--labeled', type=float, default=0.4, help='Labeled dataset size')
     parser.add_argument('--valid', type=float, default=0.1, help='Valid dataset size')
     parser.add_argument('--test', type=float, default=0.1, help='Test dataset size')
     parser.add_argument('--random-state', type=int, default=43, help='Generating random state')

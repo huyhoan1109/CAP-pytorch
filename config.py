@@ -14,7 +14,7 @@ OPTIMIZER = {
     1: {
         'name': 'SGD',
         'lr': LEARNING_RATE,
-        'momentum': 0.9,
+        'momentum': 0.001,
         'w_decay': 0,
         'nesterov': True
     },

@@ -9,15 +9,10 @@ class WandbLogger():
         self.args = args
         import wandb
         self.logger = wandb
-        # if key == None:
-        #     from dotenv import load_dotenv
-        #     load_dotenv('.env')
-        #     self.key = os.getenv('WANDB_API_KEY') 
-        # else:
-        #     self.key = key
         self.key = key
         self.project = 'CAP'
         self.log_dir = 'logs'
+        self.name = 'class-distribution-aware-pseudo-labels-runs'
         self.secret = anonymous
         self.init()
 
@@ -28,6 +23,7 @@ class WandbLogger():
             self.logger.init(
                 project = self.project,
                 dir = self.log_dir,
+                name=self.name
             )
 
     def log(self, state, commit=True):
@@ -56,6 +52,7 @@ def get_lr(optimizer):
 
 def save_checkpoints(
     checkpoint_path,
+    accuracy,
     current_iter,
     total_iter,
     current_epoch,
@@ -68,6 +65,7 @@ def save_checkpoints(
     ):
 
     state = {
+        'accuracy': accuracy,
         'iter': current_iter,
         'total_iter': total_iter,
         'epoch': current_epoch,
@@ -78,31 +76,38 @@ def save_checkpoints(
         'scheduler': scheduler.state_dict(),
     }
 
-    print(f"Saving checkpoint...")
+    if not is_best:
+        print(f"Saving checkpoint...")
 
-    file_path = os.path.join(checkpoint_path, LAST_MODEL)
+        file_path = os.path.join(checkpoint_path, LAST_MODEL)
 
-    if not os.path.exists(checkpoint_path):
-        print(f"Checkpoint folder {checkpoint_path} does not exist!. Create new checkpoint ...")
-        os.makedirs(checkpoint_path)
-    elif os.path.exists(checkpoint_path) and not is_best:
-        print(f"Checkpoint {file_path} does exist!. Override the checkpoint ...")
+        if not os.path.exists(checkpoint_path):
+            print(f"Checkpoint folder {checkpoint_path} does not exist!. Create new checkpoint ...")
+            os.makedirs(checkpoint_path)
+        elif os.path.exists(checkpoint_path) and not is_best:
+            print(f"Checkpoint {file_path} does exist!. Override the checkpoint ...")
+        
+        torch.save(state, file_path)
     
-    torch.save(state, file_path)
+    else:
     
-    if is_best:
         best_path = os.path.join(checkpoint_path, BEST_MODEL)
         if os.path.isfile(best_path):
             print(f"Checkpoint {best_path} does exist!. Override the checkpoint ...")
         shutil.copyfile(file_path, best_path)
 
-def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None, load_best=False):
-    if not os.path.exists(checkpoint):
-        print(f"Checkpoint {checkpoint} isn't existed")
-        return None, None, None, None
+def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None, load_best=False):
+    if not os.path.exists(checkpoint_path):
+        print(f"Checkpoint {checkpoint_path} isn't existed")
+        return 0, None, None, None, None
     
-    print(f"Load checkpoint from {checkpoint} ...")
-    cp = torch.load(checkpoint)
+    print(f"Load checkpoint from {checkpoint_path} ...")
+    if load_best:
+        load_path = os.path.join(checkpoint_path, BEST_MODEL)
+    else:
+        load_path = os.path.join(checkpoint_path, LAST_MODEL)
+    
+    cp = torch.load(load_path)
     
     # Load model
     model.load_state_dict(cp['model_state_dict'])  # maybe epoch as well
@@ -117,12 +122,14 @@ def load_checkpoints(checkpoint, model, ema, optimizer=None, scheduler=None, loa
     if scheduler and 'scheduler' in cp:
         scheduler.load_state_dict(cp['scheduler'])
 
+
+    accuracy = cp['accuracy'] if 'accuracy' in cp else 0
     last_iter = cp['iter'] if 'iter' in cp else None
     total_iter = cp['total_iter'] if 'total_iter' in cp else None
     last_epoch = cp['epoch'] if 'epoch' in cp else None
     total_epoch = cp['total_epoch'] if 'total_epoch' in cp else None
 
-    return last_iter, total_iter, last_epoch, total_epoch
+    return accuracy, last_iter, total_iter, last_epoch, total_epoch
 
 class AverageMeter():
     """Computes and stores the average and current value"""

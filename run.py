@@ -14,7 +14,7 @@ from losses import compute_loss_accuracy
 from backbone.convnext2 import convnextv2_base
 from backbone.resnet import ResNet50
 from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter, get_lr
-from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP
+from config import CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP, BEST_MODEL
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument('--opt', type=int, default=1, choices=OPTIMIZER.keys(), help='Choose optimizer type')    
     parser.add_argument('--use-asl', type=str2bool, default=True, help='Whether to use ASL loss')
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'], help='Training device')
-    parser.add_argument('--eval-it', type=int, default=1000, help='Evaluation iteration')
+    parser.add_argument('--eval-it', type=int, default=250, help='Evaluation iteration')
     args = parser.parse_args()
     return args
 
@@ -160,9 +160,11 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     assert unlabeled_loader != None
     assert valid_loader != None
     
-    last_path = os.path.join(args.cp_path, LAST_MODEL)
-    last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(last_path, model, ema, optimizer, scheduler)        
+    best_accuracy, _, _, _, _ = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=True)
     
+    _, last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=False)
+    
+
     if last_iter is None:
         last_iter = 0
     if total_iter is None:
@@ -174,41 +176,41 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     
     warpup_epoch = WARMUP_EPOCH
     batch = {}
-    best_accuracy = 0
     stop_count = 0
     logger.set_steps()
-    step_loss = AverageMeter()
+    
     for epoch in range(last_epoch, total_epoch):
-        if stop_count >= MAX_ESTOP:
-            print('Early stoping ...')
+        if (stop_count >= MAX_ESTOP):
             break
-        batch['valid'] = next(iter(valid_loader))
         for idx, (lb_batch, ulb_batch) in enumerate(zip(labeled_loader, unlabeled_loader)):
-            logger.log({'trainer/global_step': idx + epoch * total_iter})
+            logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
             batch['lb'] = lb_batch
             batch['ulb'] = ulb_batch
+            model.train()
             model.semi_mode = True if epoch >= warpup_epoch else False
             train_loss, _ = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
-            ema.update() if ema is not None else None           
-            step_loss.update(train_loss.item())
             train_loss.backward()
             optimizer.step()
             scheduler.step()
+            ema.update() if ema is not None else None
             logger.log({'train/lr': get_lr(optimizer)})
-            if ((epoch * total_iter + idx) % 100 == 0):
-                print('Epoch[{}/{}] Iter[{}/{}]: {:05.3f}'.format(epoch+1, total_epoch, idx+1, total_iter, step_loss.show()))
-
             if ((epoch * total_iter + idx) % args.eval_it == 0):
-                _, accuracy = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='valid')
+                avg_accuracy = AverageMeter()
+                for _, valid_batch in enumerate(valid_loader):
+                    batch['valid'] = valid_batch
+                    model.eval()
+                    _, accuracy = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='valid')
+                    avg_accuracy.update(accuracy)
                 is_best = False
-                save_checkpoints(args.cp_path, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
-                if accuracy < best_accuracy:
+                save_checkpoints(args.cp_path, avg_accuracy.show(), idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
+                if avg_accuracy.show() < best_accuracy:
                     stop_count += 1
-                    break
+                    if (stop_count >= MAX_ESTOP):
+                        break
                 else:
                     is_best = True
-                    best_accuracy = accuracy
-                    save_checkpoints(args.cp_path, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
+                    best_accuracy = avg_accuracy.show()
+                    save_checkpoints(args.cp_path, accuracy, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
 
 if __name__ == '__main__':
     args = parse_args()
@@ -227,7 +229,7 @@ if __name__ == '__main__':
             'cap_loss': AverageMeter(),
             'main_loss': AverageMeter()
         },
-        'val': {
+        'valid': {
             'loss': AverageMeter(),
         }
     }

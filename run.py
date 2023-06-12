@@ -183,7 +183,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     logger.set_steps()
     valid_epoch = 0
     for epoch in range(last_epoch, total_epoch):
-        with tqdm(total=total_iter, desc=f"Epoch [{epoch+1}/{total_epoch}]:") as t:
+        with tqdm(total=total_iter, desc=f"Epoch [{epoch+1}/{total_epoch}]") as t:
             for idx, (lb_batch, ulb_batch) in enumerate(zip(labeled_loader, unlabeled_loader)):
                 logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
                 batch['lb'] = lb_batch
@@ -196,7 +196,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
                 scheduler.step()
                 ema.update() if ema is not None else None
                 logger.log({'train/lr': get_lr(optimizer)})
-                if ((epoch * total_iter + idx) % args.eval_it + 1 == 0):
+                if ((epoch * total_iter + idx) % args.eval_it == (args.eval_it - 1)):
                     avg_accuracy = AverageMeter()
                     for valid_idx, valid_batch in enumerate(valid_loader):
                         batch['valid'] = valid_batch

@@ -83,7 +83,7 @@ class SemiData(Dataset):
             s_aug = self.final_transform(self.multi_transform['strong'](img))
             out = {
                 'idx': idx,
-                'X': (w_aug, s_aug)
+                'X': torch.FloatTensor([w_aug, s_aug])
             } 
         else:
             # label is a one hot vector

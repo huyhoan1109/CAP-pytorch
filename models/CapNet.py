@@ -29,10 +29,8 @@ class CapNet(nn.Module):
         if self.semi_mode:
             
             # X_ulb = (w_ulb, s_ulb)
-            num_ulb = X_ulb[0].shape[0]
-            w_ulb = X_ulb[0].to(self.device)
-            s_ulb = X_ulb[1].to(self.device)
-            inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
+            num_ulb = int(X_ulb.shape[0]/2)
+            inputs = torch.cat((X_lb, X_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.sigmoid(logits[:num_lb] / self.T)
             w_logits, s_logits = logits[num_lb:].chunk(2)

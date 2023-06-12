@@ -53,12 +53,12 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     loss_mtx = pseudo_labels.clone()
     alpha = neg_log(t_a)
     beta = neg_log(t_b)
-    loss_mtx = alpha * loss_mtx + beta * (1-loss_mtx) 
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
         loss_mtx = loss_mtx * mask_val
     
+    loss_mtx = alpha * (1-loss_mtx) + beta * loss_mtx 
     loss = (loss_mtx / demon_mtx).sum()
 
     return loss

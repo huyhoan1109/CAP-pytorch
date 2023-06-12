@@ -15,7 +15,7 @@ class CapNet(nn.Module):
         self.device = device
         self.true_bank = torch.zeros(self.num_classes).to(self.device)
     
-    def forward(self, X_lb, y_lb, X_ulb=None):
+    def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
         X_lb = X_lb.to(self.device)
@@ -29,8 +29,8 @@ class CapNet(nn.Module):
         if self.semi_mode:
             
             # X_ulb = (w_ulb, s_ulb)
-            num_ulb = int(X_ulb.shape[0]/2)
-            inputs = torch.cat((X_lb, X_ulb), dim=0)
+            num_ulb = w_ulb.shape[0]
+            inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.sigmoid(logits[:num_lb] / self.T)
             w_logits, s_logits = logits[num_lb:].chunk(2)

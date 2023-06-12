@@ -72,8 +72,9 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     if mode == 'train':
         X_lb = batch['lb']['X'].to(args.device)
         y_lb = batch['lb']['y'].to(args.device)
-        X_ulb = batch['ulb']['X'].to(args.device)
-        preds = model(X_lb, y_lb, X_ulb)
+        w_ulb = batch['ulb']['w_aug'].to(args.device)
+        s_ulb = batch['ulb']['s_aug'].to(args.device)
+        preds = model(X_lb, y_lb, w_ulb, s_ulb)
         lb_logits = preds['logits']
         
         # supervised loss

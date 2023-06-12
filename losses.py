@@ -1,7 +1,6 @@
 import torch
 from utils import neg_log, AverageMeter
 from models.CapNet import CapNet
-import numpy as np
 
 
 def loss_asl(labels, preds, masks=None, gamma_neg=1, gamma_pos=1):
@@ -17,7 +16,7 @@ def loss_asl(labels, preds, masks=None, gamma_neg=1, gamma_pos=1):
     loss_mtx[labels == 1] = ((1 - preds_pos)**gamma_pos) * neg_log(preds_pos)
     loss_mtx[labels == 0] = (preds_neg**gamma_neg) * neg_log(1 - preds_neg)
     
-    if isinstance(masks, torch.Tensor) :
+    if isinstance(masks, torch.Tensor):
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
         loss_mtx = loss_mtx * mask_val
     
@@ -68,17 +67,17 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     
     loss = 0
     accuracy = None
-    loss_f = loss_asl if args.use_asl else loss_bce
+    # loss_f = loss_asl if args.use_asl else loss_bce
     
     if mode == 'train':
-        X_lb = batch['lb']['X']
-        y_lb = batch['lb']['y']
-        X_ulb = batch['ulb']['X']
+        X_lb = batch['lb']['X'].to(args.device)
+        y_lb = batch['lb']['y'].to(args.device)
+        X_ulb = batch['ulb']['X'].to(args.device)
         preds = model(X_lb, y_lb, X_ulb)
         lb_logits = preds['logits']
         
         # supervised loss
-        lb_loss = loss_f(y_lb, lb_logits)    
+        lb_loss = loss_bce(y_lb, lb_logits)    
         trackers['train']['lb_loss'].update(lb_loss.item())
         logger.log({'train/lb_loss': trackers['train']['lb_loss'].show()})
         loss = lb_loss
@@ -89,7 +88,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
             masks = preds['masks']
 
             # unsupervised loss
-            ulb_loss = loss_f(pseudo_lb, s_logits, masks)
+            ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
             trackers['train']['ulb_loss'].update(ulb_loss.item())
             logger.log({'train/ulb_loss': trackers['train']['ulb_loss'].show()})
             loss += lambda_u * ulb_loss
@@ -115,13 +114,13 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
         model.semi_mode = False
         
         preds = model(X_valid, y_valid)['logits']
-        loss = loss_f(y_valid, preds)
+        loss = loss_bce(y_valid, preds)
         
         model.semi_mode = prev['semi_mode']
         
         trackers['valid']['loss'].update(loss.item())
         accuracy = performances['MAP'].scoring(y_valid, preds)
-        logger.log({'valid/loss': trackers['valid']['loss'].show()}),
-        logger.log({'valid/acc':accuracy})
+        logger.log({'val/loss': trackers['valid']['loss'].show()}),
+        logger.log({'val/acc': accuracy})
 
     return loss, accuracy

@@ -6,7 +6,8 @@ NEG_EPSILON = 1e-5
 WARMUP_EPOCH = 10
 LAMBDA_U = 1
 T = 1
-TOTAL_EPOCH = 400
+N_WORKERS = 2
+TOTAL_EPOCH = 100
 TOTAL_ITERS = 1000
 LEARNING_RATE = 0.0001
 
@@ -30,7 +31,7 @@ OPTIMIZER = {
         'name': 'AdamW',
         'lr': LEARNING_RATE,
         'betas': (0.9, 0.999),
-        'eps': 1e-8,
+        'eps': 1e-6,
         'w_decay': 0,
         'amsgrad': True
     }

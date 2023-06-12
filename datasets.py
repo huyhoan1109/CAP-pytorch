@@ -79,8 +79,8 @@ class SemiData(Dataset):
         
         if self.mode == 'unlabeled':
             # dim_y = (len(img), len(self.metadata['cat2id']))
-            w_aug = self.final_transform(self.multi_transform['weak'](img)).to(self.device)
-            s_aug = self.final_transform(self.multi_transform['strong'](img)).to(self.device)
+            w_aug = self.final_transform(self.multi_transform['weak'](img))
+            s_aug = self.final_transform(self.multi_transform['strong'](img))
             out = {
                 'idx': idx,
                 'X': (w_aug, s_aug)
@@ -90,8 +90,8 @@ class SemiData(Dataset):
             label = np.copy(self.metadata['labels'][idx, :])
             out = {
                 'idx': idx,
-                'X': self.final_transform(img).to(self.device),
-                'y': torch.FloatTensor(label).to(self.device)
+                'X': self.final_transform(img),
+                'y': torch.FloatTensor(label)
             }   
         
         return out

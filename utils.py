@@ -26,7 +26,7 @@ class WandbLogger():
                 name=self.name
             )
 
-    def log(self, state, commit=True):
+    def log(self, state, commit=False):
         self.logger.log(state, commit=commit)
 
     def save_checkpoints(self):
@@ -40,8 +40,9 @@ class WandbLogger():
 
     def set_steps(self):
         self.logger.define_metric('trainer/global_step')
+        self.logger.define_metric('valid_step')
         self.logger.define_metric('train/*', step_metric='trainer/global_step')
-        self.logger.define_metric('val/*', step_metric='trainer/global_step')
+        self.logger.define_metric('val/*', step_metric='valid_step')
 
     def finish(self):
         self.logger.finish()        
@@ -94,7 +95,7 @@ def save_checkpoints(
         best_path = os.path.join(checkpoint_path, BEST_MODEL)
         if os.path.isfile(best_path):
             print(f"Checkpoint {best_path} does exist!. Override the checkpoint ...")
-        shutil.copyfile(file_path, best_path)
+        torch.save(state, best_path)
 
 def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None, load_best=False):
     if not os.path.exists(checkpoint_path):
@@ -106,30 +107,32 @@ def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None
         load_path = os.path.join(checkpoint_path, BEST_MODEL)
     else:
         load_path = os.path.join(checkpoint_path, LAST_MODEL)
-    
-    cp = torch.load(load_path)
-    
-    # Load model
-    model.load_state_dict(cp['model_state_dict'])  # maybe epoch as well
+    try:    
+        cp = torch.load(load_path)
+        
+        # Load model
+        model.load_state_dict(cp['model_state_dict'])  # maybe epoch as well
 
-    if ema is not None and cp['ema_state_dict'] is not None:
-        ema.load_state_dict(cp['ema_state_dict'])
+        if ema is not None and cp['ema_state_dict'] is not None:
+            ema.load_state_dict(cp['ema_state_dict'])
 
-    # Load optimizer and scheduler
-    if optimizer and 'optimizer' in cp:
-        optimizer.load_state_dict(cp['optimizer'])
+        # Load optimizer and scheduler
+        if optimizer and 'optimizer' in cp:
+            optimizer.load_state_dict(cp['optimizer'])
 
-    if scheduler and 'scheduler' in cp:
-        scheduler.load_state_dict(cp['scheduler'])
+        if scheduler and 'scheduler' in cp:
+            scheduler.load_state_dict(cp['scheduler'])
 
 
-    accuracy = cp['accuracy'] if 'accuracy' in cp else 0
-    last_iter = cp['iter'] if 'iter' in cp else None
-    total_iter = cp['total_iter'] if 'total_iter' in cp else None
-    last_epoch = cp['epoch'] if 'epoch' in cp else None
-    total_epoch = cp['total_epoch'] if 'total_epoch' in cp else None
+        accuracy = cp['accuracy'] if 'accuracy' in cp else 0
+        last_iter = cp['iter'] if 'iter' in cp else None
+        total_iter = cp['total_iter'] if 'total_iter' in cp else None
+        last_epoch = cp['epoch'] if 'epoch' in cp else None
+        total_epoch = cp['total_epoch'] if 'total_epoch' in cp else None
 
-    return accuracy, last_iter, total_iter, last_epoch, total_epoch
+        return accuracy, last_iter, total_iter, last_epoch, total_epoch
+    except:
+        return 0, None, None, None, None
 
 class AverageMeter():
     """Computes and stores the average and current value"""
@@ -139,13 +142,13 @@ class AverageMeter():
     def reset(self):
         self.sum = 0
         self.count = 0
-
+        self.avg = 0
     def update(self, val, n=1):
         self.sum += val * n
         self.count += n
-
+        self.avg = self.sum / self.count
     def show(self):
-        return self.sum / self.count
+        return self.avg
     
 def str2bool(v):
     """

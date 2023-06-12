@@ -18,8 +18,8 @@ class CapNet(nn.Module):
     def forward(self, X_lb, y_lb, X_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
-        X = X_lb
-
+        X_lb = X_lb.to(self.device)
+        y_lb = y_lb.to(self.device)
         num_lb = X_lb.shape[0]
         
         self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
@@ -30,9 +30,9 @@ class CapNet(nn.Module):
             
             # X_ulb = (w_ulb, s_ulb)
             num_ulb = X_ulb[0].shape[0]
-            w_ulb = X_ulb[0]
-            s_ulb = X_ulb[1]
-            inputs = torch.cat((X, w_ulb, s_ulb), dim=0)
+            w_ulb = X_ulb[0].to(self.device)
+            s_ulb = X_ulb[1].to(self.device)
+            inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.sigmoid(logits[:num_lb] / self.T)
             w_logits, s_logits = logits[num_lb:].chunk(2)
@@ -80,7 +80,7 @@ class CapNet(nn.Module):
             } 
         else:
             # else train with labeled data and update gamma
-            lb_logits = self.network(X)
+            lb_logits = self.network(X_lb)
             lb_logits = torch.sigmoid(lb_logits / self.T)
             results = {
                 'logits': lb_logits

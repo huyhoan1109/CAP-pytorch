@@ -51,14 +51,17 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     demon_mtx = (batch_size * num_classes) * torch.ones_like(pseudo_labels)
     
     loss_mtx = pseudo_labels.clone()
+    
     alpha = neg_log(t_a)
     beta = neg_log(t_b)
+    
+    loss_mtx[loss_mtx == 1] = - alpha
+    loss_mtx[loss_mtx == 0] = + beta 
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
         loss_mtx = loss_mtx * mask_val
-    
-    loss_mtx = - alpha * loss_mtx[loss_mtx == 1] + beta * (loss_mtx[loss_mtx == 0] - 1) 
+     
     loss = (loss_mtx / demon_mtx).sum()
 
     return loss
@@ -78,7 +81,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
         lb_logits = preds['logits']
         
         # supervised loss
-        lb_loss = loss_bce(y_lb, lb_logits)    
+        lb_loss = loss_asl(y_lb, lb_logits)    
         trackers['train']['lb_loss'].update(lb_loss.item())
         logger.log({'train/lb_loss': trackers['train']['lb_loss'].show()})
         loss = lb_loss
@@ -89,7 +92,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
             masks = preds['masks']
 
             # unsupervised loss
-            ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
+            ulb_loss = loss_asl(pseudo_lb, s_logits, masks)
             trackers['train']['ulb_loss'].update(ulb_loss.item())
             logger.log({'train/ulb_loss': trackers['train']['ulb_loss'].show()})
             loss += lambda_u * ulb_loss

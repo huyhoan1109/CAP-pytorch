@@ -249,5 +249,6 @@ if __name__ == '__main__':
 
     logger = WandbLogger(args, '4a4edf57140d746df80b213d934913111fdc8143')
     if args.train:
-        train_model(args, logger, trackers, performances, loaders, model, ema, optimizer, scheduler)    
+        train_model(args, logger, trackers, performances, loaders, model, ema, optimizer, scheduler)
+        # logger.save_checkpoints()
     pass

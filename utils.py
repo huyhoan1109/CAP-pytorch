@@ -26,7 +26,7 @@ class WandbLogger():
                 name=self.name
             )
 
-    def log(self, state, commit=False):
+    def log(self, state, commit=True):
         self.logger.log(state, commit=commit)
 
     def save_checkpoints(self):

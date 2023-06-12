@@ -72,7 +72,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     if mode == 'train':
         X_lb = batch['lb']['X'].to(args.device)
         y_lb = batch['lb']['y'].to(args.device)
-        X_ulb = batch['ulb']['X'].to(args.device)
+        X_ulb = batch['ulb']['X']
         preds = model(X_lb, y_lb, X_ulb)
         lb_logits = preds['logits']
         
@@ -107,8 +107,8 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     
     elif mode == 'valid':
         prev = {}
-        X_valid = batch['valid']['X']
-        y_valid = batch['valid']['y']
+        X_valid = batch['valid']['X'].to(args.device)
+        y_valid = batch['valid']['y'].to(args.device)
 
         prev['semi_mode'] = model.semi_mode
         model.semi_mode = False

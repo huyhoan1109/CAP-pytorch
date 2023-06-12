@@ -63,13 +63,13 @@ def generate_npy(split_path, meta_path, cat2id, args):
             label_matrix[i, label_indices] = 1.0
         
         if phase == 'train':
-            X_labeled, X_valid, y_labeled, y_valid = train_test_split(np.array(image_list[phase]), np.array(label_matrix), train_size=args.labeled_size/0.5)
+            X_labeled, X_valid, y_labeled, y_valid = train_test_split(np.array(image_list[phase]), np.array(label_matrix), train_size=args.labeled/0.5)
             np.save(os.path.join(meta_path, 'formatted_labeled_images.npy'), X_labeled)
             np.save(os.path.join(meta_path, 'formatted_valid_images.npy'), X_valid)
             np.save(os.path.join(meta_path, 'formatted_labeled_labels.npy'), y_labeled)
             np.save(os.path.join(meta_path, 'formatted_valid_labels.npy'), y_valid)
         else:
-            X_unlabeled, X_test, _, y_test = train_test_split(np.array(image_list[phase]), np.array(label_matrix), train_size=args.labeled_size/0.5)
+            X_unlabeled, X_test, _, y_test = train_test_split(np.array(image_list[phase]), np.array(label_matrix), train_size=args.labeled/0.5)
             np.save(os.path.join(meta_path, 'formatted_unlabeled_images.npy'), X_unlabeled)
             np.save(os.path.join(meta_path, 'formatted_test_images.npy'), X_test)
             np.save(os.path.join(meta_path, 'formatted_test_labels.npy'), y_test)

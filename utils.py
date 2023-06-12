@@ -186,4 +186,4 @@ def load_meta(path, mode):
     return meta  
 
 def neg_log(x):
-    return - torch.clamp(torch.log(x), min=-100)
+    return -torch.log(x+NEG_EPSILON)

@@ -58,7 +58,7 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
         loss_mtx = loss_mtx * mask_val
     
-    loss_mtx = alpha * (1-loss_mtx) + beta * loss_mtx 
+    loss_mtx = - alpha * loss_mtx[loss_mtx == 1] + beta * (loss_mtx[loss_mtx == 0] - 1) 
     loss = (loss_mtx / demon_mtx).sum()
 
     return loss
@@ -101,7 +101,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
                 cap_loss = loss_cap(pseudo_lb, t_a, t_b, masks)
                 trackers['train']['cap_loss'].update(cap_loss.item())
                 logger.log({'train/cap_loss': trackers['train']['cap_loss'].show()})
-                loss -= lambda_u * cap_loss
+                loss += lambda_u * cap_loss
         
         trackers['train']['main_loss'].update(loss.item())
         logger.log({'train/main_loss': trackers['train']['main_loss'].show()})

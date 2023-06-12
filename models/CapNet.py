@@ -35,7 +35,7 @@ class CapNet(nn.Module):
             
             # choose indexes from sorted soft_labels (f(x)) 
             # so that only f(x) (%) is >= t_a
-            soft_labels = torch.softmax(w_logits / self.T)
+            soft_labels = torch.softmax(w_logits / self.T, dim=0)
             
             # first transpose the sft_tp => (num_classes, sorted(batch))
             sft_tp = soft_labels.clone().permute(1, 0)
@@ -79,7 +79,7 @@ class CapNet(nn.Module):
             lb_logits = self.network(X_lb)
             self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
             self.bs_counter += num_lb
-            lb_logits = torch.softmax(lb_logits / self.T)
+            lb_logits = torch.softmax(lb_logits / self.T, dim=0)
             results = {
                 'logits': lb_logits
             } 

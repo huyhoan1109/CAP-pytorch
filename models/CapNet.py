@@ -67,7 +67,7 @@ class CapNet(nn.Module):
 
             # make pseudo_labels and masks
             masks = torch.where((soft_labels <= t_b) | (soft_labels >= t_a), 1, 0).float()
-            pseudo_labels = torch.where(soft_labels >= 0.5, 1, -1).long()                   
+            pseudo_labels = torch.where(soft_labels >= t_a, 1, -1).long()                   
             results = {
                 'logits': lb_logits,
                 'pseudo_lb': pseudo_labels,

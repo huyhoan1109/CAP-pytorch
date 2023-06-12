@@ -42,8 +42,6 @@ def generate_npy(split_path, meta_path, cat2id, args):
 
     for phase in ['train', 'val']:
         for cat in cat2id:
-            image_list = []
-            labels = []
             with open(os.path.join(split_path, f"{cat}_{phase}.txt"), 'r') as f:
                 for line in f:
                     cur_line = line.rstrip().split(' ')

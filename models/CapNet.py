@@ -22,8 +22,6 @@ class CapNet(nn.Module):
         y_lb = y_lb.to(self.device)
         num_lb = X_lb.shape[0]
         
-        self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
-        self.bs_counter += num_lb
 
         # semi_mode == True => train with both labeled and unlabeled data
         if self.semi_mode:
@@ -32,12 +30,12 @@ class CapNet(nn.Module):
             num_ulb = w_ulb.shape[0]
             inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
-            lb_logits = torch.sigmoid(logits[:num_lb] / self.T)
+            lb_logits = torch.softmax(logits[:num_lb] / self.T, dim=0)
             w_logits, s_logits = logits[num_lb:].chunk(2)
             
             # choose indexes from sorted soft_labels (f(x)) 
             # so that only f(x) (%) is >= t_a
-            soft_labels = torch.sigmoid(w_logits / self.T)
+            soft_labels = torch.softmax(w_logits / self.T)
             
             # first transpose the sft_tp => (num_classes, sorted(batch))
             sft_tp = soft_labels.clone().permute(1, 0)
@@ -79,7 +77,9 @@ class CapNet(nn.Module):
         else:
             # else train with labeled data and update gamma
             lb_logits = self.network(X_lb)
-            lb_logits = torch.sigmoid(lb_logits / self.T)
+            self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
+            self.bs_counter += num_lb
+            lb_logits = torch.softmax(lb_logits / self.T)
             results = {
                 'logits': lb_logits
             } 

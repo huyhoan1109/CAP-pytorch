@@ -30,8 +30,8 @@ class CapNet(nn.Module):
             num_ulb = w_ulb.shape[0]
             inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
-            lb_logits = torch.sigmoid(logits[:num_lb] / self.T, dim=0)
-            w_logits, s_logits = torch.sigmoid(logits[num_lb:], dim=0).chunk(2)
+            lb_logits = torch.sigmoid(logits[:num_lb] / self.T)
+            w_logits, s_logits = torch.sigmoid(logits[num_lb:]).chunk(2)
             
             # choose indexes from sorted soft_labels (f(x)) 
             # so that only f(x) (%) is >= t_a
@@ -78,7 +78,7 @@ class CapNet(nn.Module):
             lb_logits = self.network(X_lb)
             self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
             self.bs_counter += num_lb
-            lb_logits = torch.sigmoid(lb_logits / self.T, dim=0)
+            lb_logits = torch.sigmoid(lb_logits / self.T)
             results = {
                 'logits': lb_logits
             } 

@@ -34,7 +34,7 @@ def loss_bce(labels, preds, masks=None):
     loss_mtx[labels == 1] = neg_log(preds[labels == 1])
     loss_mtx[labels == 0] = neg_log(1 - preds[labels == 0])
     
-    if isinstance(masks, torch.Tensor) :
+    if isinstance(masks, torch.Tensor):
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
         loss_mtx = loss_mtx * mask_val
     
@@ -50,13 +50,10 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     num_classes = int(pseudo_labels.size(1))
     demon_mtx = (batch_size * num_classes) * torch.ones_like(pseudo_labels)
     
-    loss_mtx = pseudo_labels.clone()
+    loss_mtx = torch.zeros_like(pseudo_labels)
     
-    alpha = neg_log(t_a)
-    beta = neg_log(t_b)
-    
-    loss_mtx[loss_mtx == 1] = - alpha
-    loss_mtx[loss_mtx == 0] = + beta 
+    loss_mtx[pseudo_labels == 1] = neg_log(t_a * pseudo_labels[pseudo_labels == 1])
+    loss_mtx[pseudo_labels == 0] = neg_log(t_b * (1 - pseudo_labels[pseudo_labels == 0])) 
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true

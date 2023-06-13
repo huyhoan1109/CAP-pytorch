@@ -83,16 +83,16 @@ class SemiData(Dataset):
             s_aug = self.final_transform(self.multi_transform['strong'](img))
             out = {
                 'idx': idx,
-                'w_aug': w_aug,
-                's_aug': s_aug
+                'w_aug': torch.FloatTensor(w_aug).to(self.device),
+                's_aug': torch.FloatTensor(s_aug).to(self.device)
             } 
         else:
             # label is a one hot vector
             label = np.copy(self.metadata['labels'][idx, :])
             out = {
                 'idx': idx,
-                'X': self.final_transform(img),
-                'y': torch.FloatTensor(label)
+                'X': torch.FloatTensor(self.final_transform(img)).to(self.device),
+                'y': torch.FloatTensor(label).to(self.device)
             }   
         
         return out

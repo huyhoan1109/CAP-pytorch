@@ -2,6 +2,7 @@ import os
 import argparse
 from tqdm import tqdm
 
+import torch
 from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
@@ -14,7 +15,7 @@ from losses import compute_loss_accuracy
 from backbone.convnext import convnext_base
 from backbone.resnet import ResNet50
 from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter, get_lr
-from config import N_WORKERS, CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, TOTAL_ITERS, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP, BEST_MODEL
+from config import N_WORKERS, BATCH_SIZE, CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, TOTAL_ITERS, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP, BEST_MODEL
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -49,7 +50,7 @@ def get_loaders(args):
     
     labeled_loader = DataLoader(
         labeled_dataset, 
-        64, 
+        BATCH_SIZE, 
         True, 
         drop_last=True,
         num_workers=N_WORKERS
@@ -64,7 +65,7 @@ def get_loaders(args):
     
     unlabeled_loader = DataLoader(
         unlabeled_dataset, 
-        64, 
+        BATCH_SIZE, 
         True,
         drop_last=True,
         num_workers=N_WORKERS
@@ -79,7 +80,7 @@ def get_loaders(args):
     
     valid_loader = DataLoader(
         valid_dataset, 
-        64, 
+        BATCH_SIZE, 
         True,
         drop_last=True,
         num_workers=N_WORKERS
@@ -94,7 +95,7 @@ def get_loaders(args):
     
     test_loader = DataLoader(
         test_dataset, 
-        64, 
+        BATCH_SIZE, 
         True,
         drop_last=True,
         num_workers=N_WORKERS
@@ -225,7 +226,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 if __name__ == '__main__':
     args = parse_args()
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = ResNet50(num_classes).to(args.device)
+    backbone = ResNet50(num_classes).to(device=args.device)
     model = CapNet(backbone, num_classes, device=args.device)
     ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)

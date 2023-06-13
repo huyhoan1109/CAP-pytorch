@@ -26,13 +26,11 @@ def get_multi_transform():
     w_aug = transforms.Compose([
         transforms.RandomHorizontalFlip(),
         transforms.RandomCrop(size, padding=int(0.125 * size), padding_mode='reflect'),
-        transforms.ToTensor()
     ])
     s_aug = transforms.Compose([
         transforms.RandomHorizontalFlip(),
         transforms.RandomCrop(size, padding=int(0.125 * size), padding_mode='reflect'),
         RandAugment(2, 10),
-        transforms.ToTensor()
     ])
     augs = {
         'weak': w_aug,

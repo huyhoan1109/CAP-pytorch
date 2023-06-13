@@ -22,6 +22,8 @@ class CapNet(nn.Module):
         y_lb = y_lb.to(self.device)
         num_lb = X_lb.shape[0]
         
+        self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
+        self.bs_counter += num_lb
 
         # semi_mode == True => train with both labeled and unlabeled data
         if self.semi_mode:
@@ -76,8 +78,6 @@ class CapNet(nn.Module):
         else:
             # else train with labeled data and update gamma
             lb_logits = self.network(X_lb)
-            self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
-            self.bs_counter += num_lb
             lb_logits = torch.sigmoid(lb_logits / self.T)
             results = {
                 'logits': lb_logits

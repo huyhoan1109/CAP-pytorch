@@ -226,9 +226,9 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 if __name__ == '__main__':
     args = parse_args()
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = ResNet50(num_classes).to(device=args.device)
+    backbone = ResNet50(num_classes)
     model = CapNet(backbone, num_classes, device=args.device)
-    ema = EMA(model, beta=args.ema_decay).to(args.device)
+    ema = EMA(model, beta=args.ema_decay).to(device=torch.device(args.device))
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)

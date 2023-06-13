@@ -5,7 +5,7 @@ import torch.nn as nn
 class CapNet(nn.Module):
     def __init__(self, network, num_classes, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False, device='cuda'):
         super(CapNet, self).__init__()
-        self.network = network
+        self.network = copy.deepcopy(network)
         self.num_classes = num_classes
         self.T = T
         self.n_0 = n_0
@@ -22,7 +22,7 @@ class CapNet(nn.Module):
         y_lb = y_lb.to(self.device)
         num_lb = X_lb.shape[0]
         
-        self.true_bank += torch.sum((y_lb == 1), dim=0).to(self.device)
+        self.true_bank += torch.sum((y_lb == 1), dim=0)
         self.bs_counter += num_lb
 
         # semi_mode == True => train with both labeled and unlabeled data
@@ -44,6 +44,7 @@ class CapNet(nn.Module):
             # gamma hold distribution of positve label in labeled dataset
             # and ro hold distribution of negative label in labeled dataset
             gamma = self.true_bank / self.bs_counter 
+            gamma = gamma.to(self.device)
             ro = 1 - gamma
             gamma = self.n_0 * gamma
             ro = self.n_1 * ro

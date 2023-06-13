@@ -11,7 +11,7 @@ from MA.EMA import EMA
 from datasets import SemiData
 from models.CapNet import CapNet
 from losses import compute_loss_accuracy
-from CAP.backbone.convnext import convnext_base
+from backbone.convnext import convnext_base
 from backbone.resnet import ResNet50
 from utils import save_checkpoints, load_checkpoints, str2bool, WandbLogger, AverageMeter, get_lr
 from config import N_WORKERS, CHECKPOINT_PATH, DATASET_INFO, WARMUP_EPOCH, LAMBDA_U, TOTAL_EPOCH, TOTAL_ITERS, T, SCHEDULER, OPTIMIZER, LAST_MODEL, MAX_ESTOP, BEST_MODEL
@@ -225,7 +225,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 if __name__ == '__main__':
     args = parse_args()
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = convnext_base(num_classes=num_classes).to(args.device)
+    backbone = ResNet50(num_classes).to(args.device)
     model = CapNet(backbone, num_classes, device=args.device)
     ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)

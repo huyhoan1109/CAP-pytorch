@@ -92,7 +92,7 @@ class SemiData(Dataset):
             out = {
                 'idx': idx,
                 'X': self.final_transform(img),
-                'y': torch.tensor(label).to(self.device)
+                'y': torch.FloatTensor(label)
             }   
         
         return out

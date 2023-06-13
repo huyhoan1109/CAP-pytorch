@@ -225,7 +225,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 if __name__ == '__main__':
     args = parse_args()
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = ResNet50(num_classes).to(args.device)
+    backbone = convnext_base(num_classes=num_classes).to(args.device)
     model = CapNet(backbone, num_classes, device=args.device)
     ema = EMA(model, beta=args.ema_decay).to(args.device)
     loaders = get_loaders(args)

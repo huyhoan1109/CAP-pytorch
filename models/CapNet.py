@@ -31,14 +31,13 @@ class CapNet(nn.Module):
             inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.softmax(logits[:num_lb] / self.T, dim=0)
-            w_logits, s_logits = logits[num_lb:].chunk(2)
+            w_logits, s_logits = torch.softmax(logits[num_lb:], dim=0).chunk(2)
             
             # choose indexes from sorted soft_labels (f(x)) 
             # so that only f(x) (%) is >= t_a
-            soft_labels = torch.softmax(w_logits / self.T, dim=0)
-            
+
             # first transpose the sft_tp => (num_classes, sorted(batch))
-            sft_tp = soft_labels.clone().permute(1, 0)
+            sft_tp = w_logits.clone().permute(1, 0)
 
             # gamma hold distribution of positve label in labeled dataset
             # and ro hold distribution of negative label in labeled dataset
@@ -64,8 +63,8 @@ class CapNet(nn.Module):
                 t_b = sft_[i, t_b_ids[i]]
 
             # make pseudo_labels and masks
-            masks = torch.where((soft_labels <= t_b) | (soft_labels >= t_a), 1, 0).float()
-            pseudo_labels = torch.where(soft_labels >= t_a, 1, -1).float()                
+            masks = torch.where((w_logits <= t_b) | (w_logits >= t_a), 1, 0).float()
+            pseudo_labels = torch.where(w_logits >= t_a, 1, 0).float()                
             results = {
                 'logits': lb_logits,
                 'pseudo_lb': pseudo_labels,

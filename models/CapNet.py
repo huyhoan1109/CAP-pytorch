@@ -30,6 +30,8 @@ class CapNet(nn.Module):
             
             # X_ulb = (w_ulb, s_ulb)
             num_ulb = w_ulb.shape[0]
+            w_ulb = w_ulb.to(self.device)
+            s_ulb = s_ulb.to(self.device)
             inputs = torch.cat((X_lb, w_ulb, s_ulb), dim=0)
             logits = self.network(inputs)
             lb_logits = torch.sigmoid(logits[:num_lb] / self.T)

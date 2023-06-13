@@ -83,15 +83,15 @@ class SemiData(Dataset):
             s_aug = self.final_transform(self.multi_transform['strong'](img))
             out = {
                 'idx': idx,
-                'w_aug': torch.tensor(w_aug).to(self.device),
-                's_aug': torch.tensor(s_aug).to(self.device)
+                'w_aug': w_aug,
+                's_aug': s_aug
             } 
         else:
             # label is a one hot vector
             label = np.copy(self.metadata['labels'][idx, :])
             out = {
                 'idx': idx,
-                'X': torch.tensor(self.final_transform(img)).to(self.device),
+                'X': self.final_transform(img),
                 'y': torch.tensor(label).to(self.device)
             }   
         

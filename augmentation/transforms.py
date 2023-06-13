@@ -17,8 +17,8 @@ def get_pre_transform():
 
 def get_final_transform():
     tf = transforms.Compose([
-        transforms.ToTensor(),
         transforms.Normalize(mean=mean, std=std),
+        transforms.ToTensor(),
     ])
     return tf
 

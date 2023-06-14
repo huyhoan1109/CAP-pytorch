@@ -15,7 +15,6 @@ class SemiData(Dataset):
         pre_transform=None, 
         multi_transform=None, 
         final_transform=None,
-        device='cpu'
         ):
         '''
         Args:
@@ -27,8 +26,6 @@ class SemiData(Dataset):
             Image transforming method
         mode: str
             Data loading method ('unlabeled', 'labeled', 'valid', 'test')
-        device: str
-            Device to load tensor ('cpu', 'cuda')
 
         SemiData will load metadata which contains:
 
@@ -45,7 +42,6 @@ class SemiData(Dataset):
         self.img_path = img_path
         self.meta_path = meta_path
         self.mode = mode
-        self.device = device
         self.pre_transform = pre_transform
         self.multi_transform = multi_transform
         self.final_transform = final_transform

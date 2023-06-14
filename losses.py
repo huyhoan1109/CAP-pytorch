@@ -53,7 +53,7 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     loss_mtx = torch.zeros_like(pseudo_labels)
     
     loss_mtx[pseudo_labels == 1] = - neg_log(t_a) * pseudo_labels[pseudo_labels == 1]
-    loss_mtx[pseudo_labels == 0] = neg_log(t_b) * (1 - pseudo_labels[pseudo_labels == 0])
+    loss_mtx[pseudo_labels == 0] = - neg_log(t_b) * (1 - pseudo_labels[pseudo_labels == 0])
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true
@@ -70,10 +70,10 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     # loss_f = loss_asl if args.use_asl else loss_bce
     
     if mode == 'train':
-        X_lb = batch['lb']['X'].to(args.device)
-        y_lb = batch['lb']['y'].to(args.device)
-        w_ulb = batch['ulb']['w_aug'].to(args.device)
-        s_ulb = batch['ulb']['s_aug'].to(args.device)
+        X_lb = batch['lb']['X']
+        y_lb = batch['lb']['y']
+        w_ulb = batch['ulb']['w_aug']
+        s_ulb = batch['ulb']['s_aug']
         preds = model(X_lb, y_lb, w_ulb, s_ulb)
         lb_logits = preds['logits']
         
@@ -108,8 +108,8 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     
     elif mode == 'valid':
         prev = {}
-        X_valid = batch['valid']['X'].to(args.device)
-        y_valid = batch['valid']['y'].to(args.device)
+        X_valid = batch['valid']['X']
+        y_valid = batch['valid']['y']
 
         prev['semi_mode'] = model.semi_mode
         model.semi_mode = False

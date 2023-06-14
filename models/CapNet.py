@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 class CapNet(nn.Module):
-    def __init__(self, network, num_classes, device, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False):
+    def __init__(self, network, num_classes, device, bs_counter=0, n_0=0.95, n_1=0.95, T=1, semi_mode=False):
         super(CapNet, self).__init__()
         self.network = copy.deepcopy(network)
         self.num_classes = num_classes
@@ -13,7 +13,10 @@ class CapNet(nn.Module):
         self.bs_counter = bs_counter
         self.semi_mode = semi_mode
         self.device = device
+        self.network.to(self.device)
         self.true_bank = torch.zeros(self.num_classes).to(self.device)
+        self.t_a_init = torch.zeros(self.num_classes).to(self.device)
+        self.t_b_init = torch.zeros(self.num_classes).to(self.device)
     
     def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
@@ -46,7 +49,7 @@ class CapNet(nn.Module):
             # gamma hold distribution of positve label in labeled dataset
             # and ro hold distribution of negative label in labeled dataset
             gamma = self.true_bank / self.bs_counter 
-            gamma = gamma.to(self.device)
+            gamma = gamma
             ro = 1 - gamma
             gamma = self.n_0 * gamma
             ro = self.n_1 * ro
@@ -55,8 +58,8 @@ class CapNet(nn.Module):
             sft_, _ = sft_tp.sort(descending=True)
 
             # init t_a and t_b
-            t_a = torch.zeros(self.num_classes).to(self.device)
-            t_b = torch.zeros(self.num_classes).to(self.device)
+            t_a = self.t_a_init.clone()
+            t_b = self.t_a_init.clone()
 
             # ids of high and low threshold (ID is from 0 to batch-1)
             t_a_ids = ((num_ulb-1) * gamma).int()

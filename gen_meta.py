@@ -2,9 +2,9 @@ import os
 import argparse
 import numpy as np
 import pandas as pd
+from preproc import format_voc2, format_voc
 from utils import str2bool, load_npy_pkl
 from config import CAT2ID, ID2CAT, DATASET_INFO
-from preproc import format_voc, format_cub
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -27,7 +27,7 @@ def generate_meta(args):
     if dataset == 'voc2012':
         cat2id = CAT2ID[dataset]
         split_path = DATASET_INFO[dataset]['split']
-        format_voc.generate_npy(split_path, meta, cat2id, args)
+        format_voc2.generate_npy(split_path, meta, cat2id, args)
     # elif dataset == 'cub':        
     #     cat2id = {}
     #     data_path = DATASET_INFO[dataset]['root'] + '/CUB_200_2011'

@@ -45,7 +45,6 @@ def get_loaders(args):
     labeled_dataset = SemiData(
         img_path, 
         DATASET_INFO[dataset]['meta'], 
-        device=args.device
     )
     
     labeled_loader = DataLoader(
@@ -60,7 +59,6 @@ def get_loaders(args):
         img_path, 
         DATASET_INFO[dataset]['meta'], 
         mode='unlabeled',
-        device=args.device
     )
     
     unlabeled_loader = DataLoader(
@@ -75,7 +73,6 @@ def get_loaders(args):
         img_path, 
         DATASET_INFO[dataset]['meta'], 
         mode='valid',
-        device=args.device
     )
     
     valid_loader = DataLoader(
@@ -90,7 +87,6 @@ def get_loaders(args):
         img_path, 
         DATASET_INFO['voc2012']['meta'], 
         mode='test',
-        device=args.device
     )
     
     test_loader = DataLoader(
@@ -227,9 +223,10 @@ if __name__ == '__main__':
     args = parse_args()
     args.device = torch.device(args.device)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = ResNet50(num_classes).to(args.device)
+    backbone = ResNet50(num_classes)
     model = CapNet(backbone, num_classes, args.device)
-    ema = EMA(model, beta=args.ema_decay).to(args.device)
+    ema = EMA(model, beta=args.ema_decay)
+    ema.restore_ema_model_device()
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)

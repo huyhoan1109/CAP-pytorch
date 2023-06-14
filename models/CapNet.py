@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 
 class CapNet(nn.Module):
-    def __init__(self, network, num_classes, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False, device=torch.device):
+    def __init__(self, network, num_classes, device, bs_counter=0, n_0=1, n_1=1, T=1, semi_mode=False):
         super(CapNet, self).__init__()
-        self.network = copy.deepcopy(network).to(device)
+        self.network = copy.deepcopy(network)
         self.num_classes = num_classes
         self.T = T
         self.n_0 = n_0

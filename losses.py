@@ -70,10 +70,10 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
     # loss_f = loss_asl if args.use_asl else loss_bce
     
     if mode == 'train':
-        X_lb = batch['lb']['X']
-        y_lb = batch['lb']['y']
-        w_ulb = batch['ulb']['w_aug']
-        s_ulb = batch['ulb']['s_aug']
+        X_lb = batch['lb']['X'].to(args.device)
+        y_lb = batch['lb']['y'].to(args.device)
+        w_ulb = batch['ulb']['w_aug'].to(args.device)
+        s_ulb = batch['ulb']['s_aug'].to(args.device)
         preds = model(X_lb, y_lb, w_ulb, s_ulb)
         lb_logits = preds['logits']
         

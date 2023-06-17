@@ -128,7 +128,7 @@ def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None
 
 
         accuracy = cp['accuracy'] if 'accuracy' in cp else 0
-        true_dist = cp['true_dist'] if 'true_dist' is cp else None
+        true_dist = cp['true_dist'] if 'true_dist' in cp else None
         last_iter = cp['iter'] if 'iter' in cp else None
         total_iter = cp['total_iter'] if 'total_iter' in cp else None
         last_epoch = cp['epoch'] if 'epoch' in cp else None

@@ -190,7 +190,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
                 batch['ulb'] = ulb_batch
                 if dist_update_epoch > epoch:
                     num_lb = lb_batch['y'].shape[0]
-                    true_dist = (torch.sum((lb_batch['y'] == 1), dim=0).clone().to(args.device) + true_dist * idx * num_lb) / ((idx+1) * num_lb)
+                    true_dist = (torch.sum((lb_batch['y'] == 1), dim=0).to(args.device) + true_dist * idx * num_lb) / ((idx+1) * num_lb)
                 batch['true_dist'] = true_dist
                 logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
                 model.semi_mode = True if epoch >= warpup_epoch else False

@@ -15,7 +15,7 @@ class CapNet(nn.Module):
         self.t_a_init = torch.zeros(self.num_classes).to(self.device)
         self.t_b_init = torch.zeros(self.num_classes).to(self.device)
     
-    def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None, dist=None):
+    def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None, true_dist=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
         X_lb = X_lb.to(self.device)
@@ -42,7 +42,7 @@ class CapNet(nn.Module):
 
             # gamma hold distribution of positve label in labeled dataset
             # and ro hold distribution of negative label in labeled dataset
-            gamma = dist.clone() 
+            gamma = true_dist 
             gamma = gamma
             ro = 1 - gamma
             gamma = self.n_0 * gamma
@@ -52,8 +52,8 @@ class CapNet(nn.Module):
             sft_, _ = sft_tp.sort(descending=True)
 
             # init t_a and t_b
-            t_a = self.t_a_init.clone()
-            t_b = self.t_a_init.clone()
+            t_a = self.t_a_init
+            t_b = self.t_b_init
 
             # ids of high and low threshold (ID is from 0 to batch-1)
             t_a_ids = ((num_ulb-1) * gamma).int()

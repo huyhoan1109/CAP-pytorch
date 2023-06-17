@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--sch', type=int, default=1, choices=SCHEDULER.keys(), help='Choose scheduler type')
     parser.add_argument('--opt', type=int, default=1, choices=OPTIMIZER.keys(), help='Choose optimizer type')    
     parser.add_argument('--device', type=str, default='cuda:0', help='Training device')
+    parser.add_argument('--use-asl', type=str2bool, default=True, help='Using ASL')
     parser.add_argument('--workers', type=int, default=N_WORKERS, help='Number of workers')
     parser.add_argument('--eval-it', type=int, default=1000, help='Evaluation iteration')
     args = parser.parse_args()

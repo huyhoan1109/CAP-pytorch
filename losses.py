@@ -78,8 +78,10 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
         preds = model(X_lb, y_lb, w_ulb, s_ulb, true_dist)
         lb_logits = preds['logits']
         
+        lf = loss_asl if args.use_asl else loss_bce
+
         # supervised loss
-        lb_loss = loss_bce(y_lb, lb_logits)    
+        lb_loss = lf(y_lb, lb_logits)    
         trackers['train']['lb_loss'].update(lb_loss.item())
         logger.log({'train/lb_loss': trackers['train']['lb_loss'].show()})
         loss = lb_loss
@@ -90,7 +92,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
             masks = preds['masks']
 
             # unsupervised loss
-            ulb_loss = loss_bce(pseudo_lb, s_logits, masks)
+            ulb_loss = lf(pseudo_lb, s_logits, masks)
             trackers['train']['ulb_loss'].update(ulb_loss.item())
             logger.log({'train/ulb_loss': trackers['train']['ulb_loss'].show()})
             loss += lambda_u * ulb_loss
@@ -116,7 +118,7 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
         model.semi_mode = False
         
         preds = model(X_valid, y_valid)['logits']
-        loss = loss_bce(y_valid, preds)
+        loss = lf(y_valid, preds)
         
         model.semi_mode = prev['semi_mode']
         

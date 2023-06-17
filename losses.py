@@ -74,7 +74,8 @@ def compute_loss_accuracy(args, logger, trackers, performances, batch, model, la
         y_lb = batch['lb']['y']
         w_ulb = batch['ulb']['w_aug']
         s_ulb = batch['ulb']['s_aug']
-        preds = model(X_lb, y_lb, w_ulb, s_ulb)
+        true_dist = batch['true_dist']
+        preds = model(X_lb, y_lb, w_ulb, s_ulb, true_dist)
         lb_logits = preds['logits']
         
         # supervised loss

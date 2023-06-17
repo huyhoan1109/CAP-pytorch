@@ -9,24 +9,19 @@ class CapNet(nn.Module):
         self.T = T
         self.n_0 = n_0
         self.n_1 = n_1
-        self.bs_counter = bs_counter
         self.semi_mode = semi_mode
         self.device = device
         self.network = network.to(self.device)
-        self.true_bank = torch.zeros(self.num_classes).to(self.device)
         self.t_a_init = torch.zeros(self.num_classes).to(self.device)
         self.t_b_init = torch.zeros(self.num_classes).to(self.device)
     
-    def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None):
+    def forward(self, X_lb, y_lb, w_ulb=None, s_ulb=None, dist=None):
         # X_lb (b, c, h, w), y_lb(b, prob)
         # change to X_lb(b, h, w, c)
         X_lb = X_lb.to(self.device)
         y_lb = y_lb.to(self.device)
         num_lb = X_lb.shape[0]
         
-        self.true_bank += torch.sum((y_lb == 1), dim=0)
-        self.bs_counter += num_lb
-
         # semi_mode == True => train with both labeled and unlabeled data
         if self.semi_mode:
             
@@ -47,7 +42,7 @@ class CapNet(nn.Module):
 
             # gamma hold distribution of positve label in labeled dataset
             # and ro hold distribution of negative label in labeled dataset
-            gamma = self.true_bank / self.bs_counter 
+            gamma = dist.clone() 
             gamma = gamma
             ro = 1 - gamma
             gamma = self.n_0 * gamma

@@ -161,11 +161,10 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     assert unlabeled_loader != None
     assert valid_loader != None
     
-    best_accuracy, _, _, _, _ = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=True)
+    best_accuracy, _, _, _, _, _ = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=True)
     
-    _, last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=False)
+    _, true_dist, last_iter, total_iter, last_epoch, total_epoch = load_checkpoints(args.cp_path, model, ema, optimizer, scheduler, load_best=False)
     
-
     if last_iter is None:
         last_iter = 0
     if total_iter is None:
@@ -174,18 +173,26 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
         last_epoch = 0
     if total_epoch is None:
         total_epoch = TOTAL_EPOCH
+    if true_dist is None:
+        true_dist = torch.zeros_like(model.num_classes).to(args.device)
     
+    dist_update_epoch = 1
     warpup_epoch = WARMUP_EPOCH
     batch = {}
     logger.set_steps()
     valid_epoch = 0
+    
     for epoch in range(last_epoch, total_epoch):
         with tqdm(total=total_iter, desc=f"Epoch [{epoch+1}/{total_epoch}]") as t:
             for idx, (lb_batch, ulb_batch) in enumerate(zip(labeled_loader, unlabeled_loader)):
-                logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
+                model.train()
                 batch['lb'] = lb_batch
                 batch['ulb'] = ulb_batch
-                model.train()
+                if dist_update_epoch > epoch:
+                    num_lb = lb_batch['y'].shape[0]
+                    true_dist = (torch.sum((lb_batch['y'] == 1), dim=0).clone() + true_dist * idx * num_lb) / ((idx+1) * num_lb)
+                batch['true_dist'] = true_dist
+                logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
                 model.semi_mode = True if epoch >= warpup_epoch else False
                 train_loss, _ = compute_loss_accuracy(args, logger, trackers, performances, batch, model, lambda_u=LAMBDA_U, mode='train')        
                 train_loss.backward()
@@ -203,13 +210,13 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
                         avg_accuracy.update(accuracy)
                     valid_epoch += 1
                     is_best = False
-                    save_checkpoints(args.cp_path, avg_accuracy.show(), idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
+                    save_checkpoints(args.cp_path, avg_accuracy.show(), true_dist, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)    
                     if avg_accuracy.show() < best_accuracy:
                         pass
                     else:
                         is_best = True
                         best_accuracy = avg_accuracy.show()
-                        save_checkpoints(args.cp_path, accuracy, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)  
+                        save_checkpoints(args.cp_path, accuracy, true_dist, idx, total_iter, epoch, total_epoch, model, ema, optimizer, scheduler, is_best)  
                 ordered_dict = {
                     'lb_loss': trackers['train']['lb_loss'].show(),
                     'ulb_loss': trackers['train']['ulb_loss'].show(),

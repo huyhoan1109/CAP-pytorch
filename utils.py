@@ -54,6 +54,7 @@ def get_lr(optimizer):
 def save_checkpoints(
     checkpoint_path,
     accuracy,
+    true_dist,
     current_iter,
     total_iter,
     current_epoch,
@@ -67,6 +68,7 @@ def save_checkpoints(
 
     state = {
         'accuracy': accuracy,
+        'true_dist': true_dist,
         'iter': current_iter,
         'total_iter': total_iter,
         'epoch': current_epoch,
@@ -100,7 +102,7 @@ def save_checkpoints(
 def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None, load_best=False):
     if not os.path.exists(checkpoint_path):
         print(f"Checkpoint {checkpoint_path} isn't existed")
-        return 0, None, None, None, None
+        return 0, None, None, None, None, None
     
     print(f"Load checkpoint from {checkpoint_path} ...")
     if load_best:
@@ -125,14 +127,15 @@ def load_checkpoints(checkpoint_path, model, ema, optimizer=None, scheduler=None
 
 
         accuracy = cp['accuracy'] if 'accuracy' in cp else 0
+        true_dist = cp['true_dist'] if 'true_dist' is cp else None
         last_iter = cp['iter'] if 'iter' in cp else None
         total_iter = cp['total_iter'] if 'total_iter' in cp else None
         last_epoch = cp['epoch'] if 'epoch' in cp else None
         total_epoch = cp['total_epoch'] if 'total_epoch' in cp else None
 
-        return accuracy, last_iter, total_iter, last_epoch, total_epoch
+        return accuracy, true_dist, last_iter, total_iter, last_epoch, total_epoch
     except:
-        return 0, None, None, None, None
+        return 0, None, None, None, None, None
 
 class AverageMeter():
     """Computes and stores the average and current value"""

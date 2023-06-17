@@ -52,8 +52,8 @@ def loss_cap(pseudo_labels, t_a=None, t_b=None, masks=None):
     
     loss_mtx = torch.zeros_like(pseudo_labels)
     
-    loss_mtx[pseudo_labels == 1] = - neg_log(t_a) * pseudo_labels[pseudo_labels == 1]
-    loss_mtx[pseudo_labels == 0] = - neg_log(t_b) * (1 - pseudo_labels[pseudo_labels == 0])
+    loss_mtx[pseudo_labels == 1] = - neg_log(t_a) 
+    loss_mtx[pseudo_labels == 0] = - neg_log(t_b)
     
     if isinstance(masks, torch.Tensor) :
         mask_val = masks.any(dim=1).float().unsqueeze(1)    # if any true

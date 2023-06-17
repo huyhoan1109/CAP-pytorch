@@ -223,7 +223,7 @@ if __name__ == '__main__':
     args = parse_args()
     args.device = torch.device(args.device)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
-    backbone = ResNet50(num_classes)
+    backbone = ResNet50(num_classes).to(args.device)
     model = CapNet(backbone, num_classes, args.device)
     ema = EMA(model, beta=args.ema_decay)
     ema.restore_ema_model_device()

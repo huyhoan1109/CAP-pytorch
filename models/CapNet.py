@@ -5,7 +5,7 @@ import torch.nn as nn
 class CapNet(nn.Module):
     def __init__(self, network, num_classes, device, bs_counter=0, n_0=0.95, n_1=0.95, T=1, semi_mode=False):
         super(CapNet, self).__init__()
-        self.network = copy.deepcopy(network)
+        self.network = network
         self.num_classes = num_classes
         self.T = T
         self.n_0 = n_0
@@ -13,7 +13,6 @@ class CapNet(nn.Module):
         self.bs_counter = bs_counter
         self.semi_mode = semi_mode
         self.device = device
-        self.network.to(self.device)
         self.true_bank = torch.zeros(self.num_classes).to(self.device)
         self.t_a_init = torch.zeros(self.num_classes).to(self.device)
         self.t_b_init = torch.zeros(self.num_classes).to(self.device)

@@ -23,7 +23,8 @@ class WandbLogger():
             self.logger.init(
                 project = self.project,
                 dir = self.log_dir,
-                name=self.name
+                name=self.name,
+                config=self.args
             )
 
     def log(self, state, commit=True):

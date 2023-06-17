@@ -75,7 +75,7 @@ def save_checkpoints(
         'epoch': current_epoch,
         'total_epoch': total_epoch,
         'model_state_dict': model.state_dict(),
-        'ema_state_dict': ema.state_dict() if ema is None else None,
+        'ema_state_dict': ema.state_dict() if ema is not None else None,
         'optimizer': optimizer.state_dict(),
         'scheduler': scheduler.state_dict(),
     }

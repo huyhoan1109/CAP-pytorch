@@ -174,7 +174,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     if total_epoch is None:
         total_epoch = TOTAL_EPOCH
     if true_dist is None:
-        true_dist = torch.zeros_like(model.num_classes).to(args.device)
+        true_dist = torch.zeros(model.num_classes).to(args.device)
     
     dist_update_epoch = 1
     warpup_epoch = WARMUP_EPOCH

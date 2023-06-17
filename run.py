@@ -174,7 +174,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
     if total_epoch is None:
         total_epoch = TOTAL_EPOCH
     if true_dist is None:
-        true_dist = torch.zeros(model.num_classes).to(args.device)
+        true_dist = torch.zeros(model.num_classes)
     
     dist_update_epoch = 1
     warpup_epoch = WARMUP_EPOCH
@@ -190,7 +190,7 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
                 batch['ulb'] = ulb_batch
                 if dist_update_epoch > epoch:
                     num_lb = lb_batch['y'].shape[0]
-                    true_dist = (torch.sum((lb_batch['y'] == 1), dim=0).to(args.device) + true_dist * idx * num_lb) / ((idx+1) * num_lb)
+                    true_dist = (torch.sum((lb_batch['y'] == 1), dim=0) + true_dist * idx * num_lb) / ((idx+1) * num_lb)
                 batch['true_dist'] = true_dist
                 logger.log({'trainer/global_step': idx + (epoch-last_epoch) * total_iter})
                 model.semi_mode = True if epoch >= warpup_epoch else False
@@ -231,8 +231,9 @@ if __name__ == '__main__':
     num_classes = DATASET_INFO[args.dataset]['num_classes']
     backbone = ResNet50(num_classes).to(args.device)
     model = CapNet(backbone, num_classes, args.device).to(args.device)
-    ema = EMA(model, beta=args.ema_decay).to(args.device)
-    ema.restore_ema_model_device()
+    # ema = EMA(model, beta=args.ema_decay).to(args.device)
+    ema = None
+    # ema.restore_ema_model_device()
     loaders = get_loaders(args)
     optimizer = get_optimizer(args, model)
     scheduler = get_lr_scheduler(args, optimizer)

@@ -27,6 +27,10 @@ def generate_meta(args):
     if dataset == 'voc2012':
         cat2id = CAT2ID[dataset]
         split_path = DATASET_INFO[dataset]['split']
+        format_voc.generate_npy(split_path, meta, cat2id, args)
+    elif dataset == 'voc2012-2':
+        cat2id = CAT2ID[dataset]
+        split_path = DATASET_INFO[dataset]['split']
         format_voc2.generate_npy(split_path, meta, cat2id, args)
     else:
         raise NotImplementedError('Dataset not available!')

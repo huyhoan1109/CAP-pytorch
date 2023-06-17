@@ -2,6 +2,6 @@ torch
 numpy
 wandb
 pandas
-sklearn
+scikit-learn
 openpyxl
 torchvision

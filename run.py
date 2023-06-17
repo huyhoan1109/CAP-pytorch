@@ -221,7 +221,6 @@ def train_model(args, logger, trackers, performances, loaders, model, ema=None, 
 
 if __name__ == '__main__':
     args = parse_args()
-    args.device = torch.device(args.device)
     num_classes = DATASET_INFO[args.dataset]['num_classes']
     backbone = ResNet50(num_classes).to(args.device)
     model = CapNet(backbone, num_classes, args.device)
